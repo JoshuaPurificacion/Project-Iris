@@ -1,14 +1,13 @@
 import sounddevice as sd
 import numpy as np
 import librosa
-import collections
-import webrtcvad
+import scipy.signal
 from faster_whisper import WhisperModel
 import pyttsx3
 from kokoro_onnx import Kokoro
 
 VOICE_PITCH_STEPS = 4
-CABLE_DEVICE_INDEX = 6
+MIC_DEVICE_INDEX = 1
 IRIS_SPEAKING = False
 
 class VoiceManager:
@@ -24,58 +23,65 @@ class VoiceManager:
             print(f"[VoiceManager] Failed to load Kokoro: {e}")
             self.kokoro = None
 
-    # VAD configuration
-    VAD_AGGRESSIVENESS = 2      # 0-3, higher = more aggressive silence detection
-    SAMPLE_RATE       = 16000
-    FRAME_DURATION    = 30      # ms per frame (10, 20, or 30 only)
-    FRAME_SIZE        = int(16000 * 30 / 1000)  # = 480 samples
-    SILENCE_FRAMES    = 30      # consecutive silent frames before stopping
-    MAX_RECORD_SECONDS = 15     # safety cap
+    # VAD configuration (RMS-based)
+    SPEAKING_THRESHOLD = 0.09    # RMS volume threshold — raise if too sensitive
+    SILENCE_FRAMES     = 20      # consecutive silent frames before stopping
+    MAX_RECORD_SECONDS = 15      # safety cap
+    FRAME_DURATION     = 0.03    # 30ms frames
+    SAMPLE_RATE        = 16000
+    FRAME_SIZE         = int(16000 * 0.03) # = 480 samples
 
     def listen(self):
         """
-        Record audio using Voice Activity Detection (VAD) via webrtcvad.
-        Starts capturing when speech is detected via a ring-buffer vote,
+        Record audio using a simple RMS volume detection threshold.
+        Starts capturing when volume stays above SPEAKING_THRESHOLD,
         stops when SILENCE_FRAMES consecutive silent frames are observed.
         Returns the transcribed text string, or '' if nothing was spoken.
         """
         if IRIS_SPEAKING:
             return ""
 
-        vad = webrtcvad.Vad(self.VAD_AGGRESSIVENESS)
         frames = []
         silent_frames = 0
         speaking_started = False
-        ring_buffer = collections.deque(maxlen=10)
+        pre_buffer = []
 
         print("[VoiceManager] Listening...")
 
-        max_iterations = int(self.SAMPLE_RATE / self.FRAME_SIZE * self.MAX_RECORD_SECONDS)
+        # Each frame is 30ms; loop until safety cap is hit
+        num_frames = int(self.MAX_RECORD_SECONDS / self.FRAME_DURATION)
 
         with sd.InputStream(samplerate=self.SAMPLE_RATE, channels=1,
-                            dtype='int16', blocksize=self.FRAME_SIZE) as stream:
-            for _ in range(max_iterations):
+                            dtype='float32', blocksize=self.FRAME_SIZE,
+                            device=MIC_DEVICE_INDEX) as stream:
+            for _ in range(num_frames):
                 if IRIS_SPEAKING:
                     break
 
                 frame, _ = stream.read(self.FRAME_SIZE)
-                frame_bytes = frame.tobytes()
-                is_speech = vad.is_speech(frame_bytes, self.SAMPLE_RATE)
+                
+                # Calculate RMS volume
+                volume = np.sqrt(np.mean(np.square(frame)))
+                is_speech = volume > self.SPEAKING_THRESHOLD
 
                 if not speaking_started:
-                    ring_buffer.append((frame_bytes, is_speech))
-                    num_voiced = len([f for f, s in ring_buffer if s])
-                    if num_voiced > 0.7 * ring_buffer.maxlen:
+                    # Keep a small buffer of the most recent frames to capture speech onset
+                    pre_buffer.append(frame.copy())
+                    if len(pre_buffer) > 10:
+                        pre_buffer.pop(0)
+
+                    if is_speech:
                         speaking_started = True
-                        frames.extend([f for f, _ in ring_buffer])
-                        ring_buffer.clear()
+                        frames.extend(pre_buffer)
+                        pre_buffer.clear()
                         print("[VoiceManager] Speech detected, recording...")
                 else:
-                    frames.append(frame_bytes)
+                    frames.append(frame.copy())
                     if not is_speech:
                         silent_frames += 1
                     else:
                         silent_frames = 0
+                    
                     if silent_frames > self.SILENCE_FRAMES:
                         print("[VoiceManager] Silence detected, stopping.")
                         break
@@ -83,8 +89,8 @@ class VoiceManager:
         if not frames or not speaking_started:
             return ""
 
-        # Convert raw int16 bytes → float32 array for faster-whisper
-        audio = np.frombuffer(b"".join(frames), dtype=np.int16).astype(np.float32) / 32768.0
+        # Concatenate float32 frames for faster-whisper
+        audio = np.concatenate(frames).flatten()
         print("[VoiceManager] Transcribing locally...")
         segments, _ = self.model.transcribe(audio, language="en")
         return " ".join(s.text for s in segments).strip()
@@ -108,16 +114,16 @@ class VoiceManager:
             audio, sr = self.kokoro.create(text, voice="af_sky", speed=1.0, lang="en-us")
 
             audio = librosa.effects.pitch_shift(audio.astype(float), sr=sr, n_steps=VOICE_PITCH_STEPS)
-            audio = audio.astype('float32')
+            audio = scipy.signal.resample_poly(audio, 44100, 24000).astype('float32')
 
             # Signal avatar before playback
             if avatar is not None:
                 avatar.set_state("speaking")
 
-            # Play via sounddevice at 24000 Hz as specified
+            # Play via sounddevice at 44100 Hz
             IRIS_SPEAKING = True
             try:
-                sd.play(audio, samplerate=24000, device=CABLE_DEVICE_INDEX)
+                sd.play(audio, samplerate=44100)
                 sd.wait()
             finally:
                 IRIS_SPEAKING = False

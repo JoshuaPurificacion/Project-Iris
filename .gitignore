@@ -21,3 +21,5 @@ __pycache__/
 
 output.txt
 captures/
+
+vts_token.txt

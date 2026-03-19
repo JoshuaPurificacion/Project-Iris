@@ -224,7 +224,7 @@ class Iris:
             messages=self.messages,
             tools=tools,
             stream=True,
-            options={'num_gpu': 0, 'temperature': 0.1}
+            options={'num_gpu': 30, 'temperature': 0.1}
         )
 
         # Stream-speak sentence-by-sentence; collect any tool calls
@@ -275,7 +275,7 @@ class Iris:
                     messages=self.messages,
                     tools=tools,
                     stream=True,
-                    options={'num_gpu': 0, 'temperature': 0.1}
+                    options={'num_gpu': 30, 'temperature': 0.1}
                 )
                 content, _ = self._speak_streamed(followup_stream, avatar=avatar)
 

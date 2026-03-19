@@ -9,3 +9,14 @@
 ### [PENDING] OmniSense nudges saving as user messages in memory
 Internal outcome nudges passed to chat_fn() are being logged as user messages.
 Fix: add save=False flag to chat() for internal system calls.
+
+### [RESOLVED] Idle Loop Firing trigger_feeder on Every Nudge
+LLM was receiving tool definitions during idle nudges and defaulting to tool use.
+Fixed by adding use_tools=False flag to _chat_internal() and passing it through
+chat() → idle_loop() calls. Idle nudges now run with tools=[] so no hardware
+tools can fire during unprompted speech.
+
+### [RESOLVED] faster-whisper Transcribing Iris's Own TTS Output
+Mic was picking up speaker audio creating a feedback loop where Iris talked to herself.
+Short term fix: use headphones during testing.
+Long term fix pending: add IRIS_SPEAKING mute flag to listen() in voice.py.

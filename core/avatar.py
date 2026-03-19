@@ -34,7 +34,7 @@ class AvatarWindow:
                 print(f"[AvatarWindow] Could not load image for state '{state}': {e}")
                 self.images[state] = None
 
-        # Display label
+        # Display label directly in window
         self.label = tk.Label(self.window, image=self.images["idle"], bg="black", bd=0)
         self.label.pack()
 
@@ -87,9 +87,11 @@ class AvatarWindow:
         margin = 20
         self.base_x = screen_w - win_w - margin
         self.base_y = screen_h - win_h - margin - 40  # above taskbar
-        self.window.geometry(f"+{self.base_x}+{self.base_y}")
+        # Lock size so place() doesn't collapse the window
+        self.window.geometry(f"{win_w}x{win_h}+{self.base_x}+{self.base_y}")
 
         self.current_state = "idle"
+        self._caption_time = 0.0
 
         # Drag state
         self._press_time = 0.0
@@ -107,9 +109,13 @@ class AvatarWindow:
     # ------------------------------------------------------------------ #
 
     def show_caption(self, text):
-        """Display text in the caption bar, then auto-clear after 4 seconds."""
+        """Display text in the caption bar."""
+        self._caption_time = time.time()
         self.window.after(0, lambda: self.caption_label.config(text=text))
-        self.window.after(4000, lambda: self.caption_label.config(text=""))
+
+    def clear_caption(self):
+        """Clear text in the caption bar."""
+        self.window.after(0, lambda: self.caption_label.config(text=""))
 
     def _on_send(self):
         """Called when the user presses Enter or the send button."""
@@ -122,19 +128,24 @@ class AvatarWindow:
     #  State management                                                    #
     # ------------------------------------------------------------------ #
 
-    def set_state(self, state):
+    def set_state(self, state, animated=True):
         """Thread-safe state change — schedules onto the tkinter main loop."""
         self.current_state = state
-        self.window.after(0, lambda: self._apply_state(state))
+        self.window.after(0, lambda: self._apply_state(state, animated))
 
-    def _apply_state(self, state):
-        self.jump()
+    def _apply_state(self, state, animated=True):
+        if animated:
+            self.jump()
         if self.images.get(state):
             self.label.configure(image=self.images[state])
+            
         if state == "speaking":
             self.shake_loop()
         else:
-            self.window.geometry(f"+{self.base_x}+{self.base_y}")
+            self.label.place(x=0, y=0)
+            
+        if state == "idle" and (time.time() - self._caption_time) > 3.0:
+            self.clear_caption()
 
     # ------------------------------------------------------------------ #
     #  Animation helpers                                                   #
@@ -149,12 +160,13 @@ class AvatarWindow:
     def shake_loop(self):
         """20 fps positional jitter during speaking state."""
         if self.current_state != "speaking":
-            # Stop shaking; reset to base position
-            self.window.geometry(f"+{self.base_x}+{self.base_y}")
+            # Stop shaking; reset to original relative position
+            self.label.place(x=0, y=0)
             return
         x_offset = random.randint(-4, 4)
         y_offset = random.randint(-4, 4)
-        self.window.geometry(f"+{self.base_x + x_offset}+{self.base_y + y_offset}")
+        # Directly offset label inside window using placed offsets
+        self.label.place(x=x_offset, y=y_offset)
         self.window.after(50, self.shake_loop)
 
     def bob(self):
@@ -194,8 +206,7 @@ class AvatarWindow:
 
     def blink_loop(self):
         """
-        Periodic blink animation. Runs forever in a daemon thread.
-        Closes eyes (thinking state image) then opens them again with head-bob jumps.
+        Periodic blink animation. Closes eyes for 150ms without jumping.
         """
         while True:
             # Wait 4-7 seconds between blinks
@@ -205,27 +216,15 @@ class AvatarWindow:
             if self.current_state != "idle":
                 continue
 
-            # Eyes close — schedule on tkinter thread, then trigger a jump on close
-            def _close_eyes():
-                if self.current_state != "idle":
-                    return
-                if self.images.get("thinking"):
-                    self.label.configure(image=self.images["thinking"])
-                self.jump()
-
-            self.window.after(0, _close_eyes)
-
-            # Eyes open after 150 ms with another jump
+            # Close eyes
+            self.window.after(0, lambda: self.label.configure(image=self.images["thinking"]) if self.images.get("thinking") else None)
+            
+            # Eyes open after 150 ms
             time.sleep(0.15)
 
-            def _open_eyes():
-                if self.current_state != "idle":
-                    return
-                if self.images.get("idle"):
-                    self.label.configure(image=self.images["idle"])
-                self.jump()
-
-            self.window.after(0, _open_eyes)
+            # Reopen eyes — only if still idle
+            if self.current_state == "idle":
+                self.window.after(0, lambda: self.label.configure(image=self.images["idle"]) if self.images.get("idle") else None)
 
     # ------------------------------------------------------------------ #
     #  Entry point (blocks on main thread)                                 #
