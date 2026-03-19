@@ -29,7 +29,7 @@ TOOL_CONTEXTS = {
     ],
 }
 
-IDLE_TIMEOUT_SECONDS = 20
+IDLE_TIMEOUT_SECONDS = 45
 
 IDLE_NUDGES = [
     "Say something random that just crossed your mind. Keep it short and casual.",
@@ -120,6 +120,7 @@ class Iris:
             {"role": "system", "content": self.system_prompt}
         ]
         self.last_interaction_time = time.time()
+        self.last_spoke_time = time.time()
         self.lock = threading.RLock()
         self.is_speaking = False
         self.vm = None
@@ -142,6 +143,8 @@ class Iris:
             with self.lock:
                 if time.time() - self.last_interaction_time > IDLE_TIMEOUT_SECONDS:
                     if self.is_speaking:
+                        continue
+                    if time.time() - self.last_spoke_time < 15:
                         continue
                     
                     self.is_speaking = True
@@ -201,6 +204,7 @@ class Iris:
         if buffer.strip() and self.vm and not detected_tool_calls:
             self.vm.speak(strip_markdown(buffer.strip()), avatar=avatar)
 
+        self.last_spoke_time = time.time()
         return full_response.strip(), detected_tool_calls
 
     def chat(self, user_text, save=True, use_tools=True, avatar=None):
