@@ -115,6 +115,9 @@ class VoiceManager:
 
             audio = librosa.effects.pitch_shift(audio.astype(float), sr=sr, n_steps=VOICE_PITCH_STEPS)
             audio = scipy.signal.resample_poly(audio, 44100, 24000).astype('float32')
+            
+            silence_pad = np.zeros(int(44100 * 0.3), dtype='float32')
+            audio = np.concatenate([audio, silence_pad])
 
             # Signal avatar before playback
             if avatar is not None:
