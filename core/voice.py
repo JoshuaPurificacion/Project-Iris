@@ -5,7 +5,9 @@ from faster_whisper import WhisperModel
 import pyttsx3
 from kokoro_onnx import Kokoro
 
-VOICE_PITCH_STEPS = 3
+VOICE_PITCH_STEPS = 4
+CABLE_DEVICE_INDEX = 6
+IRIS_SPEAKING = False
 
 class VoiceManager:
     def __init__(self):
@@ -29,6 +31,9 @@ class VoiceManager:
         then transcribe it using the faster-whisper base model.
         Returns the transcribed text string, or an empty string if silence is detected.
         """
+        if IRIS_SPEAKING:
+            return ""
+
         fs = 16000  # Default sample rate required by Whisper
         duration = 5  # seconds
 
@@ -59,30 +64,55 @@ class VoiceManager:
 
         return text
 
-    def speak(self, text):
+    def speak(self, text, avatar=None):
         """
         Read the given text aloud using Kokoro-82M locally.
         Catches any errors silently and falls back to pyttsx3.
+        avatar: optional AvatarWindow instance used to reflect speaking state.
         """
+        global IRIS_SPEAKING
         try:
             if not self.kokoro:
                 raise ValueError("Kokoro model not loaded")
-                
+
             # Generate audio using Kokoro
             audio, sr = self.kokoro.create(text, voice="af_sky", speed=1.0, lang="en-us")
-            
+
             audio = librosa.effects.pitch_shift(audio.astype(float), sr=sr, n_steps=VOICE_PITCH_STEPS)
             audio = audio.astype('float32')
-            
+
+            # Signal avatar before playback
+            if avatar is not None:
+                avatar.set_state("speaking")
+
             # Play via sounddevice at 24000 Hz as specified
-            sd.play(audio, sr)
-            sd.wait()
+            IRIS_SPEAKING = True
+            try:
+                sd.play(audio, samplerate=24000, device=CABLE_DEVICE_INDEX)
+                sd.wait()
+            finally:
+                IRIS_SPEAKING = False
+
+            # Return avatar to idle after playback
+            if avatar is not None:
+                avatar.set_state("idle")
         except Exception as e:
             print(f"[TTS FALLBACK - pyttsx3]")
             try:
-                engine = pyttsx3.init()
-                engine.say(text)
-                engine.runAndWait()
+                if avatar is not None:
+                    avatar.set_state("speaking")
+                IRIS_SPEAKING = True
+                try:
+                    engine = pyttsx3.init()
+                    engine.say(text)
+                    engine.runAndWait()
+                finally:
+                    IRIS_SPEAKING = False
+                if avatar is not None:
+                    avatar.set_state("idle")
             except Exception:
+                IRIS_SPEAKING = False
                 # Fallback to console print on TTS failure
+                if avatar is not None:
+                    avatar.set_state("idle")
                 print(f"[TTS FALLBACK] {text}")
