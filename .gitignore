@@ -1,0 +1,20 @@
+# Virtual environment
+.venv/
+
+# Kokoro model files (too large for GitHub)
+models/
+
+# Conversation history (personal data)
+history.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables
+.env
+
+# Ollama models (stored separately)
+*.gguf
+*.bin
