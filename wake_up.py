@@ -34,19 +34,13 @@ def voice_loop(vm, iris, avatar):
                 vm.speak("Switching to idle mode. Hardware tools disabled.", avatar=avatar)
                 continue
 
-            # Pass to Iris agent (avatar state changes happen inside chat + speak)
+            # Pass to Iris agent (speaking happens inside chat → _speak_streamed)
             with iris.lock:
                 response_text = iris.chat(text, avatar=avatar)
-                if response_text:
-                    iris.is_speaking = True
 
-            # Print and speak the response
-            print(f"Iris: {response_text}")
+            # Just log — no separate vm.speak() needed
             if response_text:
-                try:
-                    vm.speak(response_text, avatar=avatar)
-                finally:
-                    iris.is_speaking = False
+                print(f"Iris: {response_text}")
 
     except KeyboardInterrupt:
         print("\nExiting voice loop.")
@@ -64,6 +58,19 @@ def main():
     vm = VoiceManager()
     iris = Iris()
     iris.vm = vm
+
+    # --- Text input callback ---
+    def on_text_submitted(text):
+        print(f"[Text Input] User: {text}")
+        iris.reset_idle_timer()
+        threading.Thread(
+            target=iris.chat,
+            args=(text,),
+            kwargs={"avatar": avatar},
+            daemon=True
+        ).start()
+
+    avatar.on_text_input = on_text_submitted
 
     # --- Idle loop thread ---
     idle_thread = threading.Thread(target=iris.idle_loop, args=(avatar,), daemon=True)

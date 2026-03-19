@@ -100,6 +100,10 @@ class VoiceManager:
             if not self.kokoro:
                 raise ValueError("Kokoro model not loaded")
 
+            # Show caption immediately before audio generation
+            if avatar is not None:
+                avatar.show_caption(text)
+
             # Generate audio using Kokoro
             audio, sr = self.kokoro.create(text, voice="af_sky", speed=1.0, lang="en-us")
 

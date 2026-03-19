@@ -38,6 +38,46 @@ class AvatarWindow:
         self.label = tk.Label(self.window, image=self.images["idle"], bg="black", bd=0)
         self.label.pack()
 
+        # ── Text input bar ────────────────────────────────────────────────
+        self.input_frame = tk.Frame(self.window, bg="#2a2a3e")
+        self.input_entry = tk.Entry(
+            self.input_frame,
+            font=("Arial", 12),
+            bg="#2a2a3e",
+            fg="white",
+            insertbackground="white",
+            relief="flat",
+            width=28
+        )
+        self.input_entry.pack(side="left", padx=6, pady=4)
+        self.send_button = tk.Button(
+            self.input_frame,
+            text="➤",
+            font=("Arial", 12),
+            bg="#e63946",
+            fg="white",
+            relief="flat",
+            command=self._on_send
+        )
+        self.send_button.pack(side="right", padx=4)
+        self.input_frame.pack(side="bottom", fill="x")
+        self.input_entry.bind("<Return>", lambda e: self._on_send())
+        self.on_text_input = None   # wired from wake_up.py
+
+        # ── Caption bar ───────────────────────────────────────────────────
+        self.caption_label = tk.Label(
+            self.window,
+            text="",
+            font=("Arial Rounded MT Bold", 14),
+            fg="white",
+            bg="#1a1a2e",
+            wraplength=380,
+            justify="center",
+            padx=10,
+            pady=6
+        )
+        self.caption_label.pack(side="bottom", fill="x")
+
         # Position bottom-right
         self.window.update_idletasks()
         screen_w = self.window.winfo_screenwidth()
@@ -61,6 +101,22 @@ class AvatarWindow:
         self.label.bind("<ButtonPress-1>", self.on_press)
         self.label.bind("<B1-Motion>", self.on_drag)
         self.label.bind("<ButtonRelease-1>", self.on_release)
+
+    # ------------------------------------------------------------------ #
+    #  Caption + text input                                                #
+    # ------------------------------------------------------------------ #
+
+    def show_caption(self, text):
+        """Display text in the caption bar, then auto-clear after 4 seconds."""
+        self.window.after(0, lambda: self.caption_label.config(text=text))
+        self.window.after(4000, lambda: self.caption_label.config(text=""))
+
+    def _on_send(self):
+        """Called when the user presses Enter or the send button."""
+        text = self.input_entry.get().strip()
+        if text and self.on_text_input:
+            self.input_entry.delete(0, tk.END)
+            self.on_text_input(text)
 
     # ------------------------------------------------------------------ #
     #  State management                                                    #
