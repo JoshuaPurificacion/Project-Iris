@@ -1,6 +1,8 @@
 import sounddevice as sd
 import numpy as np
 import librosa
+import collections
+import webrtcvad
 from faster_whisper import WhisperModel
 import pyttsx3
 from kokoro_onnx import Kokoro
@@ -22,47 +24,70 @@ class VoiceManager:
             print(f"[VoiceManager] Failed to load Kokoro: {e}")
             self.kokoro = None
 
-    # Minimum RMS energy level to consider audio as speech (not silence/noise)
-    SILENCE_THRESHOLD = 0.01
+    # VAD configuration
+    VAD_AGGRESSIVENESS = 2      # 0-3, higher = more aggressive silence detection
+    SAMPLE_RATE       = 16000
+    FRAME_DURATION    = 30      # ms per frame (10, 20, or 30 only)
+    FRAME_SIZE        = int(16000 * 30 / 1000)  # = 480 samples
+    SILENCE_FRAMES    = 30      # consecutive silent frames before stopping
+    MAX_RECORD_SECONDS = 15     # safety cap
 
     def listen(self):
         """
-        Record a 5-second audio chunk from the microphone using sounddevice,
-        then transcribe it using the faster-whisper base model.
-        Returns the transcribed text string, or an empty string if silence is detected.
+        Record audio using Voice Activity Detection (VAD) via webrtcvad.
+        Starts capturing when speech is detected via a ring-buffer vote,
+        stops when SILENCE_FRAMES consecutive silent frames are observed.
+        Returns the transcribed text string, or '' if nothing was spoken.
         """
         if IRIS_SPEAKING:
             return ""
 
-        fs = 16000  # Default sample rate required by Whisper
-        duration = 5  # seconds
+        vad = webrtcvad.Vad(self.VAD_AGGRESSIVENESS)
+        frames = []
+        silent_frames = 0
+        speaking_started = False
+        ring_buffer = collections.deque(maxlen=10)
 
-        print("[VoiceManager] Listening for 5 seconds...")
-        # Record from default microphone
-        recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='float32')
-        sd.wait()  # Block execution until recording finishes
+        print("[VoiceManager] Listening...")
 
-        # Flatten the 2D array into a 1D array for transcription
-        audio_data = np.squeeze(recording)
+        max_iterations = int(self.SAMPLE_RATE / self.FRAME_SIZE * self.MAX_RECORD_SECONDS)
 
-        # --- Silence gate: skip Whisper entirely if audio is too quiet ---
-        mean_amp = np.mean(np.abs(audio_data))
-        if mean_amp < 0.01:
-            print("[VoiceManager] Silence detected, skipping.")
+        with sd.InputStream(samplerate=self.SAMPLE_RATE, channels=1,
+                            dtype='int16', blocksize=self.FRAME_SIZE) as stream:
+            for _ in range(max_iterations):
+                if IRIS_SPEAKING:
+                    break
+
+                frame, _ = stream.read(self.FRAME_SIZE)
+                frame_bytes = frame.tobytes()
+                is_speech = vad.is_speech(frame_bytes, self.SAMPLE_RATE)
+
+                if not speaking_started:
+                    ring_buffer.append((frame_bytes, is_speech))
+                    num_voiced = len([f for f, s in ring_buffer if s])
+                    if num_voiced > 0.7 * ring_buffer.maxlen:
+                        speaking_started = True
+                        frames.extend([f for f, _ in ring_buffer])
+                        ring_buffer.clear()
+                        print("[VoiceManager] Speech detected, recording...")
+                else:
+                    frames.append(frame_bytes)
+                    if not is_speech:
+                        silent_frames += 1
+                    else:
+                        silent_frames = 0
+                    if silent_frames > self.SILENCE_FRAMES:
+                        print("[VoiceManager] Silence detected, stopping.")
+                        break
+
+        if not frames or not speaking_started:
             return ""
 
+        # Convert raw int16 bytes → float32 array for faster-whisper
+        audio = np.frombuffer(b"".join(frames), dtype=np.int16).astype(np.float32) / 32768.0
         print("[VoiceManager] Transcribing locally...")
-        # Force English to prevent Whisper hallucinating in other languages on noise
-        segments, info = self.model.transcribe(audio_data, beam_size=5, language="en")
-
-        # Combine transcribed segments into a single string
-        text = " ".join([segment.text for segment in segments]).strip()
-
-        # Filter out ellipsis-only hallucinations (e.g. "...  ...  ...")
-        if all(c in ". " for c in text):
-            return ""
-
-        return text
+        segments, _ = self.model.transcribe(audio, language="en")
+        return " ".join(s.text for s in segments).strip()
 
     def speak(self, text, avatar=None):
         """

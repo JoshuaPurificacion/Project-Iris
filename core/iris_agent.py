@@ -4,6 +4,7 @@ import json
 import threading
 import time
 import random
+import re
 
 TOOL_CONTEXTS = {
     "idle": [],
@@ -102,6 +103,16 @@ Iris: First birthday, first exhibit, first everything. Not a bad way to wake up.
 
 Be charming. Make them smile. Make them remember you."""
 
+def strip_markdown(text: str) -> str:
+    """Remove markdown symbols so TTS reads clean plain text."""
+    text = re.sub(r'\*{1,3}(.*?)\*{1,3}', r'\1', text)   # bold/italic
+    text = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', text)      # code
+    text = re.sub(r'^#{1,6}\s*', '', text, flags=re.MULTILINE)  # headings
+    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)  # links
+    text = re.sub(r'^[-*>]\s+', '', text, flags=re.MULTILINE)   # list/quote markers
+    return text.strip()
+
+
 class Iris:
     def __init__(self):
         self.system_prompt = SYSTEM_PROMPT
@@ -144,19 +155,57 @@ class Iris:
 
                     response_text = self.chat(nudge, save=False, use_tools=False, avatar=avatar)
                     
-            if response_text and self.vm:
+            if response_text:
+                # Speaking already happened inside _speak_streamed(); just log and clean up
                 print(f"Iris (Idle): {response_text}")
-                try:
-                    self.vm.speak(response_text, avatar=avatar)
-                finally:
-                    self.is_speaking = False
-                    self.reset_idle_timer()
+                self.is_speaking = False
+                self.reset_idle_timer()
             else:
                 self.is_speaking = False
 
-    def chat(self, user_text, save=True, avatar=None):
+    def _speak_streamed(self, response_stream, avatar=None):
+        """
+        Consume a streaming Ollama response, speaking each complete sentence
+        immediately via self.vm.speak() as tokens arrive.
+        Returns (full_response_text, tool_calls_list).
+        tool_calls_list is non-empty if the model requested a tool call.
+        """
+        buffer = ""
+        full_response = ""
+        sentence_endings = {'.', '!', '?'}
+        detected_tool_calls = []
+
+        for chunk in response_stream:
+            msg = chunk.get('message', {})
+
+            # Tool-call detected — collect it and stop speaking
+            if msg.get('tool_calls'):
+                detected_tool_calls.extend(msg['tool_calls'])
+                # Drain remaining chunks silently to complete the stream
+                for _ in response_stream:
+                    pass
+                break
+
+            token = msg.get('content', '')
+            buffer += token
+            full_response += token
+
+            # Speak when a sentence boundary is reached
+            if any(buffer.rstrip().endswith(p) for p in sentence_endings):
+                sentence = buffer.strip()
+                if sentence and self.vm:
+                    self.vm.speak(strip_markdown(sentence), avatar=avatar)
+                buffer = ""
+
+        # Flush any trailing text that didn't end with punctuation
+        if buffer.strip() and self.vm and not detected_tool_calls:
+            self.vm.speak(strip_markdown(buffer.strip()), avatar=avatar)
+
+        return full_response.strip(), detected_tool_calls
+
+    def chat(self, user_text, save=True, use_tools=True, avatar=None):
         with self.lock:
-            return self._chat_internal(user_text, save=save, avatar=avatar)
+            return self._chat_internal(user_text, save=save, use_tools=use_tools, avatar=avatar)
 
     def _chat_internal(self, user_text, save=True, use_tools=True, avatar=None):
         temp_msg = {"role": "user", "content": user_text}
@@ -165,27 +214,28 @@ class Iris:
         # Use the active context tools; idle loop overrides with empty list via use_tools=False
         tools = self.active_tools if use_tools else []
 
-        # Set avatar to thinking while waiting for Ollama inference
+        # Set avatar to thinking while first tokens are being generated
         if avatar is not None:
             avatar.set_state("thinking")
 
-        # Call ollama API
-        response = ollama.chat(
+        # ── Streaming call ────────────────────────────────────────────────────
+        response_stream = ollama.chat(
             model='llama3.1',
             messages=self.messages,
             tools=tools,
+            stream=True,
             options={'num_gpu': 0, 'temperature': 0.1}
         )
 
-        message = response.get('message', {})
-        content = message.get('content', '').strip()
-        
-        # Fallback: Sometimes local models output stringified JSON instead of using the native tool_call API
-        if not message.get('tool_calls') and content.startswith('{') and content.endswith('}'):
+        # Stream-speak sentence-by-sentence; collect any tool calls
+        content, tool_calls = self._speak_streamed(response_stream, avatar=avatar)
+
+        # ── Fallback: stringified JSON tool call (some local models) ──────────
+        if not tool_calls and content.startswith('{') and content.endswith('}'):
             try:
                 parsed = json.loads(content)
                 if 'name' in parsed:
-                    message['tool_calls'] = [{
+                    tool_calls = [{
                         'function': {
                             'name': parsed['name'],
                             'arguments': parsed.get('parameters', {})
@@ -194,39 +244,42 @@ class Iris:
             except json.JSONDecodeError:
                 pass
 
-        # Handle tool calls
-        if message.get('tool_calls'):
+        # ── Tool call handling ────────────────────────────────────────────────
+        if tool_calls:
             active_tool_names = {t['function']['name'] for t in self.active_tools}
-            for tool_call in message['tool_calls']:
+            # Reconstruct a message dict for history (mirrors non-streaming shape)
+            tool_message = {'role': 'assistant', 'content': content, 'tool_calls': tool_calls}
+
+            for tool_call in tool_calls:
                 function_name = tool_call.get('function', {}).get('name')
 
                 # Reject hallucinated or out-of-context tools
                 if function_name not in active_tool_names:
                     content = f"Sorry, I tried to use an unknown tool: {function_name}"
                     continue
-                    
+
                 print("[Iris Agent] Calling tool: trigger_feeder")
                 omnisense_skill.trigger(chat_fn=self.chat, speak_fn=lambda t: self.vm.speak(t, avatar=avatar))
-                
-                # Important: attach the tool usage to context so the model knows it was fired
-                self.messages.append(message)
+
+                # Attach tool usage to context so the model knows it was fired
+                self.messages.append(tool_message)
                 self.messages.append({
                     "role": "tool",
                     "content": "Feeder triggered successfully.",
                     "name": "trigger_feeder"
                 })
-                
-                # Get final response from model after tool call
-                response = ollama.chat(
+
+                # Follow-up response after tool call — stream-speak this too
+                followup_stream = ollama.chat(
                     model='llama3.1',
                     messages=self.messages,
                     tools=tools,
+                    stream=True,
                     options={'num_gpu': 0, 'temperature': 0.1}
                 )
-                message = response.get('message', {})
-                content = message.get('content', '').strip()
+                content, _ = self._speak_streamed(followup_stream, avatar=avatar)
 
-        # Append assistant message to history
+        # ── Persist assistant turn to history ─────────────────────────────────
         if content:
             self.messages.append({"role": "assistant", "content": content})
 
