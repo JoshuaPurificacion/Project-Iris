@@ -7,11 +7,16 @@ FEEDER_OUTCOMES = {
     "bad_status": "The OmniSense feeder responded but gave an unexpected status. React with mild confusion in character. Keep it short."
 }
 
-def trigger(chat_fn, speak_fn):
+def trigger(chat_fn, speak_fn, avatar=None):
     """
     Triggers the OmniSense feeder via HTTP GET.
     Uses a 3-second timeout so the main program doesn't freeze if the feeder is offline.
     """
+    if avatar is not None:
+        try:
+            avatar.window.after(0, lambda: avatar.float_emoji("🐾", "#ff9999"))
+        except Exception:
+            pass
     try:
         response = requests.get('http://omnisense.local/feed', timeout=3)
         if response.status_code == 200:

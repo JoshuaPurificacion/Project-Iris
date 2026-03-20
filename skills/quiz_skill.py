@@ -25,11 +25,12 @@ Respond naturally in Iris's voice — encouraging if right, give a hint if wrong
 Keep it to 2-3 sentences. Track internally if correct."""
 
 class QuizSession:
-    def __init__(self):
+    def __init__(self, avatar=None):
         self.active = False
         self.score = 0
         self.questions_asked = 0
         self.current_question = ""
+        self.avatar = avatar
 
     def start(self, chat_fn, speak_fn, topic=None):
         if not topic:
@@ -47,11 +48,20 @@ class QuizSession:
         
         self.questions_asked += 1
         
-        # Super simple internal tracker (since the prompt tells the LLM to 'track internally',
-        # we try to parse it lightly or just track if it says 'correct' / 'right')
         eval_lower = evaluation.lower()
         if "correct" in eval_lower or "right" in eval_lower or "exactly" in eval_lower:
             self.score += 1
+            if self.avatar is not None:
+                try:
+                    self.avatar.window.after(0, lambda: self.avatar.float_emoji("✨", "#ffff00"))
+                except Exception:
+                    pass
+        else:
+            if self.avatar is not None:
+                try:
+                    self.avatar.window.after(0, lambda: self.avatar.float_emoji("💡", "#aaaaff"))
+                except Exception:
+                    pass
 
     def end(self, speak_fn):
         self.active = False

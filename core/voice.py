@@ -92,13 +92,20 @@ class VoiceManager:
                         frames.extend(pre_buffer)
                         pre_buffer.clear()
                         print("[VoiceManager] Speech detected, recording...")
+                        if avatar is not None:
+                            avatar.window.after(0, lambda: avatar.float_emoji("🎤", "#00ff88"))
                 else:
                     frames.append(frame.copy())
                     if not is_speech:
                         silent_frames += 1
                     else:
                         silent_frames = 0
-                    
+
+                    # Update wave bars with mic volume
+                    if avatar is not None:
+                        normalized = min(1.0, volume / 0.15)
+                        avatar.window.after(0, lambda v=normalized: avatar.update_wave(v))
+
                     if silent_frames > self.SILENCE_FRAMES:
                         print("[VoiceManager] Silence detected, stopping.")
                         break
@@ -143,6 +150,7 @@ class VoiceManager:
             # Signal avatar before playback
             if avatar is not None:
                 avatar.set_state("speaking")
+                avatar.window.after(0, lambda: avatar.set_wave_color("#4fc3f7"))  # blue while speaking
 
             # Play via sounddevice at 44100 Hz
             IRIS_SPEAKING = True
@@ -155,6 +163,8 @@ class VoiceManager:
             # Return avatar to idle after playback
             if avatar is not None:
                 avatar.set_state("idle")
+                avatar.window.after(0, lambda: avatar.update_wave(0.0))       # collapse bars
+                avatar.window.after(0, lambda: avatar.set_wave_color("#555555"))  # grey = idle
         except Exception as e:
             print(f"[TTS FALLBACK - pyttsx3]")
             try:

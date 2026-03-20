@@ -38,6 +38,42 @@ class AvatarWindow:
         self.label = tk.Label(self.window, image=self.images["idle"], bg="black", bd=0)
         self.label.pack()
 
+        # ── Emoji float canvas (overlaid on label, same size as avatar) ───────
+        self.canvas = tk.Canvas(
+            self.window,
+            width=AVATAR_SIZE[0],
+            height=AVATAR_SIZE[1],
+            bg="black",
+            highlightthickness=0
+        )
+        # Place directly on top of the avatar label — pixel-perfect
+        self.canvas.place(x=0, y=0)
+        # Make the canvas transparent so it doesn't block the avatar image
+        self.window.attributes("-transparentcolor", "black")
+        # Prevent the canvas from eating mouse events meant for the label below
+        self.canvas.bind("<ButtonPress-1>", self.on_press)
+        self.canvas.bind("<B1-Motion>", self.on_drag)
+        self.canvas.bind("<ButtonRelease-1>", self.on_release)
+
+        # ── Audio wave indicator (5 vertical bars, right edge of avatar) ──────
+        self.wave_canvas = tk.Canvas(
+            self.window,
+            width=30,
+            height=80,
+            bg="#1a1a2e",
+            highlightthickness=0
+        )
+        self.wave_canvas.place(x=390, y=200)
+        self.wave_bars = []
+        bar_x = 4
+        for i in range(5):
+            bar = self.wave_canvas.create_rectangle(
+                bar_x, 80, bar_x + 3, 80,
+                fill="#00ff88", outline=""
+            )
+            self.wave_bars.append(bar)
+            bar_x += 6
+
         # ── Text input bar ────────────────────────────────────────────────
         self.input_frame = tk.Frame(self.window, bg="#2a2a3e")
         self.input_entry = tk.Entry(
@@ -253,6 +289,66 @@ class AvatarWindow:
             # Reopen eyes — only if still idle
             if self.current_state == "idle":
                 self.window.after(0, lambda: self.label.configure(image=self.images["idle"]) if self.images.get("idle") else None)
+
+    # ------------------------------------------------------------------ #
+    #  Floating emoji system                                               #
+    # ------------------------------------------------------------------ #
+
+    def float_emoji(self, emoji, color="#ffffff"):
+        """Spawn a floating emoji that drifts upward and fades out."""
+        try:
+            x = random.randint(150, 280)
+            y = 60  # above Iris's head
+            item = self.canvas.create_text(
+                x, y,
+                text=emoji,
+                font=("Segoe UI Emoji", 22),
+                fill=color
+            )
+            # Keep emojis above all other canvas items
+            self.canvas.tag_raise(item)
+            self._animate_float(item, y, 0)
+        except Exception as e:
+            print(f"[AvatarWindow] float_emoji error: {e}")
+
+    def _animate_float(self, item, y, step):
+        """Animate emoji floating upward and fading out over 20 frames."""
+        if step >= 20:
+            try:
+                self.canvas.delete(item)
+            except Exception:
+                pass
+            return
+        try:
+            self.canvas.move(item, 0, -3)
+        except Exception:
+            return
+        self.window.after(60, lambda: self._animate_float(item, y - 3 * step, step + 1))
+
+    # ------------------------------------------------------------------ #
+    #  Audio wave indicator                                                #
+    # ------------------------------------------------------------------ #
+
+    def update_wave(self, volume):
+        """Update audio bars based on RMS volume (0.0 to 1.0)."""
+        if not self.wave_bars:
+            return
+        try:
+            for i, bar in enumerate(self.wave_bars):
+                noise = random.uniform(0.7, 1.0)
+                height = int(volume * 70 * noise)
+                height = max(2, min(70, height))
+                self.wave_canvas.coords(bar, i * 6 + 2, 80 - height, i * 6 + 5, 80)
+        except Exception as e:
+            print(f"[AvatarWindow] update_wave error: {e}")
+
+    def set_wave_color(self, color):
+        """Set the fill color of all wave bars."""
+        try:
+            for bar in self.wave_bars:
+                self.wave_canvas.itemconfig(bar, fill=color)
+        except Exception as e:
+            print(f"[AvatarWindow] set_wave_color error: {e}")
 
     # ------------------------------------------------------------------ #
     #  Entry point (blocks on main thread)                                 #
