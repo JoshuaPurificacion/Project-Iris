@@ -29,7 +29,7 @@ class VoiceManager:
             self.kokoro = Kokoro(
                 "models/tts/kokoro-v0_19.onnx",
                 "models/tts/voices.bin",
-                providers=_get_best_providers()
+
             )
         except Exception as e:
             print(f"[VoiceManager] Failed to load Kokoro: {e}")
