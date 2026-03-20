@@ -4,6 +4,39 @@ from core.avatar import AvatarWindow
 import sys
 import threading
 
+def handle_input(text, iris, avatar):
+    iris.reset_idle_timer()
+    text_lower = text.lower()
+    
+    # Check stop quiz first
+    if any(phrase in text.lower() for phrase in ["stop quiz", "end quiz", "quit quiz"]):
+        if iris.active_quiz and iris.active_quiz.active:
+            iris.active_quiz.end(lambda t: iris.vm.speak(t, avatar=avatar))
+            iris.active_quiz = None
+            return
+            
+    # Route to quiz if active
+    if iris.active_quiz and iris.active_quiz.active:
+        iris.active_quiz.answer(
+            text, 
+            chat_fn=lambda p, save=False, use_tools=False: iris.chat(p, save=save, use_tools=use_tools, avatar=avatar),
+            speak_fn=lambda t: None
+        )
+        return
+        
+    # --- Context switching via voice command ---
+    if "feed mode" in text_lower or "omni" in text_lower:
+        iris.set_context("omnisense")
+        iris.vm.speak("Switching to OmniSense mode. Feeder is now active.", avatar=avatar)
+        return
+    elif "idle mode" in text_lower:
+        iris.set_context("idle")
+        iris.vm.speak("Switching to idle mode. Hardware tools disabled.", avatar=avatar)
+        return
+
+    # Normal conversation
+    iris.chat(text, avatar=avatar)
+
 def voice_loop(vm, iris, avatar):
     """Voice capture + Iris response loop — runs on a daemon thread."""
     print("\n--- Project Iris Wake-up Loop ---")
@@ -12,52 +45,16 @@ def voice_loop(vm, iris, avatar):
     try:
         while True:
             # Record from microphone and transcribe
-            text = vm.listen()
+            text = vm.listen(avatar)
 
             # Skip silently if nothing was detected (silence gate)
             if not text:
                 continue
 
-            iris.reset_idle_timer()
-
             # Print the transcription
             print(f"User: {text}")
 
-            # --- Context switching via voice command ---
-            text_lower = text.lower()
-            if "feed mode" in text_lower or "omni" in text_lower:
-                iris.set_context("omnisense")
-                vm.speak("Switching to OmniSense mode. Feeder is now active.", avatar=avatar)
-                continue
-            elif "idle mode" in text_lower:
-                iris.set_context("idle")
-                vm.speak("Switching to idle mode. Hardware tools disabled.", avatar=avatar)
-                continue
-
-            # --- Quiz loop intercept ---
-            if "stop quiz" in text_lower or "end quiz" in text_lower:
-                if hasattr(iris, 'active_quiz') and iris.active_quiz and iris.active_quiz.active:
-                    iris.active_quiz.end(speak_fn=lambda t: vm.speak(t, avatar=avatar))
-                else:
-                    vm.speak("We're not currently in a quiz.", avatar=avatar)
-                continue
-
-            if hasattr(iris, 'active_quiz') and iris.active_quiz and iris.active_quiz.active:
-                with iris.lock:
-                    iris.active_quiz.answer(
-                        user_response=text,
-                        chat_fn=lambda p, save=False, use_tools=False: iris.chat(p, save=save, use_tools=use_tools, avatar=avatar),
-                        speak_fn=lambda t: None # chat already stream-speaks
-                    )
-                continue
-
-            # Pass to Iris agent (speaking happens inside chat → _speak_streamed)
-            with iris.lock:
-                response_text = iris.chat(text, avatar=avatar)
-
-            # Just log — no separate vm.speak() needed
-            if response_text:
-                print(f"Iris: {response_text}")
+            handle_input(text, iris, avatar)
 
     except KeyboardInterrupt:
         print("\nExiting voice loop.")
@@ -79,32 +76,9 @@ def main():
     # --- Text input callback ---
     def on_text_submitted(text):
         print(f"[Text Input] User: {text}")
-        iris.reset_idle_timer()
-        
-        text_lower = text.lower()
-        if "stop quiz" in text_lower or "end quiz" in text_lower:
-            if hasattr(iris, 'active_quiz') and iris.active_quiz and iris.active_quiz.active:
-                iris.active_quiz.end(speak_fn=lambda t: vm.speak(t, avatar=avatar))
-            else:
-                vm.speak("We're not currently in a quiz.", avatar=avatar)
-            return
-
-        if hasattr(iris, 'active_quiz') and iris.active_quiz and iris.active_quiz.active:
-            threading.Thread(
-                target=iris.active_quiz.answer,
-                args=(text,),
-                kwargs={
-                    "chat_fn": lambda p, save=False, use_tools=False: iris.chat(p, save=save, use_tools=use_tools, avatar=avatar),
-                    "speak_fn": lambda t: None
-                },
-                daemon=True
-            ).start()
-            return
-
         threading.Thread(
-            target=iris.chat,
-            args=(text,),
-            kwargs={"avatar": avatar},
+            target=handle_input,
+            args=(text, iris, avatar),
             daemon=True
         ).start()
 

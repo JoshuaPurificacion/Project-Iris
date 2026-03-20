@@ -10,6 +10,14 @@ VOICE_PITCH_STEPS = 5
 MIC_DEVICE_INDEX = 1
 IRIS_SPEAKING = False
 
+def _get_best_providers():
+    import onnxruntime as ort
+    available = ort.get_available_providers()
+    preferred = ["OpenVINOExecutionProvider", "ROCMExecutionProvider", "CPUExecutionProvider"]
+    selected = [p for p in preferred if p in available]
+    print(f"[Kokoro] Using providers: {selected}")
+    return selected
+
 class VoiceManager:
     def __init__(self):
         # Initialize the whisper model for local inference.
@@ -18,7 +26,11 @@ class VoiceManager:
         
         # Initialize Kokoro TTS model
         try:
-            self.kokoro = Kokoro("models/tts/kokoro-v0_19.onnx", "models/tts/voices.bin")
+            self.kokoro = Kokoro(
+                "models/tts/kokoro-v0_19.onnx",
+                "models/tts/voices.bin",
+                providers=_get_best_providers()
+            )
         except Exception as e:
             print(f"[VoiceManager] Failed to load Kokoro: {e}")
             self.kokoro = None
@@ -31,14 +43,19 @@ class VoiceManager:
     SAMPLE_RATE        = 16000
     FRAME_SIZE         = int(16000 * 0.03) # = 480 samples
 
-    def listen(self):
+    def listen(self, avatar=None):
         """
         Record audio using a simple RMS volume detection threshold.
         Starts capturing when volume stays above SPEAKING_THRESHOLD,
         stops when SILENCE_FRAMES consecutive silent frames are observed.
         Returns the transcribed text string, or '' if nothing was spoken.
         """
+        if avatar is not None:
+            avatar.show_listening()
+
         if IRIS_SPEAKING:
+            if avatar is not None:
+                avatar.show_idle()
             return ""
 
         frames = []
@@ -87,12 +104,16 @@ class VoiceManager:
                         break
 
         if not frames or not speaking_started:
+            if avatar is not None:
+                avatar.show_idle()
             return ""
 
         # Concatenate float32 frames for faster-whisper
         audio = np.concatenate(frames).flatten()
         print("[VoiceManager] Transcribing locally...")
         segments, _ = self.model.transcribe(audio, language="en")
+        if avatar is not None:
+            avatar.show_idle()
         return " ".join(s.text for s in segments).strip()
 
     def speak(self, text, avatar=None):

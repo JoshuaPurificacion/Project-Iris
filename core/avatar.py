@@ -68,7 +68,7 @@ class AvatarWindow:
         self.caption_label = tk.Label(
             self.window,
             text="",
-            font=("Arial Rounded MT Bold", 14),
+            font=("Arial Rounded MT Bold", 24),
             fg="white",
             bg="#1a1a2e",
             wraplength=380,
@@ -77,6 +77,17 @@ class AvatarWindow:
             pady=6
         )
         self.caption_label.pack(side="bottom", fill="x")
+
+        self.status_label = tk.Label(
+            self.window,
+            text="",
+            font=("Arial Rounded MT Bold", 11),
+            fg="#00ff88",        # bright green
+            bg="#1a1a2e",
+            padx=8,
+            pady=3
+        )
+        self.status_label.pack(side="bottom", fill="x")
 
         # Position bottom-right
         self.window.update_idletasks()
@@ -116,6 +127,23 @@ class AvatarWindow:
     def clear_caption(self):
         """Clear text in the caption bar."""
         self.window.after(0, lambda: self.caption_label.config(text=""))
+
+    def set_status(self, text, color="#00ff88"):
+        self.window.after(0, lambda: self.status_label.config(
+            text=text, fg=color
+        ))
+
+    def show_listening(self):
+        self.set_status("🎤 Listening...", "#00ff88")   # green
+
+    def show_thinking(self):
+        self.set_status("💭 Thinking...", "#ffaa00")    # amber
+
+    def show_speaking(self):
+        self.set_status("🔊 Speaking...", "#4fc3f7")    # blue
+
+    def show_idle(self):
+        self.set_status("", "#ffffff")                  # clear
 
     def _on_send(self):
         """Called when the user presses Enter or the send button."""

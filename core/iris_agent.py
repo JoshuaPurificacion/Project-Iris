@@ -12,7 +12,7 @@ TOOL_CONTEXTS = {
             "type": "function",
             "function": {
                 "name": "start_quiz",
-                "description": "Start a computer engineering quiz when user says quiz me, test me, or asks to be quizzed",
+                "description": "Start a quiz when user says ANY of: 'quiz me', 'start quiz', 'test me', 'ask me questions', 'quiz iris', 'start the quiz', or any variation of wanting to be quizzed",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -216,14 +216,22 @@ class Iris:
             if any(buffer.rstrip().endswith(p) for p in sentence_endings):
                 sentence = buffer.strip()
                 if sentence and self.vm:
+                    if avatar is not None:
+                        avatar.show_speaking()
                     self.vm.speak(strip_markdown(sentence), avatar=avatar)
                 buffer = ""
 
         # Flush any trailing text that didn't end with punctuation
         if buffer.strip() and self.vm and not detected_tool_calls:
+            if avatar is not None:
+                avatar.show_speaking()
             self.vm.speak(strip_markdown(buffer.strip()), avatar=avatar)
 
         self.last_spoke_time = time.time()
+        
+        if avatar is not None:
+            avatar.show_idle()
+            
         return full_response.strip(), detected_tool_calls
 
     def chat(self, user_text, save=True, use_tools=True, avatar=None):
@@ -239,6 +247,7 @@ class Iris:
 
         # Set avatar to thinking while first tokens are being generated
         if avatar is not None:
+            avatar.show_thinking()
             avatar.set_state("thinking")
 
         # ── Streaming call ────────────────────────────────────────────────────
@@ -247,7 +256,7 @@ class Iris:
             messages=self.messages,
             tools=tools,
             stream=True,
-            options={'num_gpu': 15, 'temperature': 0.1}
+            options={'num_gpu': 10, 'temperature': 0.1}
         )
 
         # Stream-speak sentence-by-sentence; collect any tool calls
@@ -313,7 +322,7 @@ class Iris:
                     messages=self.messages,
                     tools=tools,
                     stream=True,
-                    options={'num_gpu': 15, 'temperature': 0.1}
+                    options={'num_gpu': 10, 'temperature': 0.1}
                 )
                 content, _ = self._speak_streamed(followup_stream, avatar=avatar)
 

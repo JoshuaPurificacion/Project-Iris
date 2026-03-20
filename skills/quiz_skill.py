@@ -55,9 +55,16 @@ class QuizSession:
 
     def end(self, speak_fn):
         self.active = False
-        summary = f"Quiz over! You got {self.score} out of {self.questions_asked} right."
-        if self.score == self.questions_asked and self.questions_asked > 0:
-            summary += " Perfect score! Great job."
+        if self.questions_asked == 0:
+            speak_fn("We didn't even get to a question! Come back when you're ready to test your knowledge.")
+            return
+        percentage = int((self.score / self.questions_asked) * 100)
+        if percentage == 100:
+            comment = "A perfect score! Okay, I'm genuinely impressed — are you sure you're not a textbook?"
+        elif percentage >= 80:
+            comment = "Really solid! You clearly know your stuff. Just a few gaps to patch up."
+        elif percentage >= 50:
+            comment = "Not bad! You've got the basics down, but there's some room to grow. Let's keep at it!"
         else:
-            summary += " Thanks for playing!"
-        speak_fn(summary)
+            comment = "Hmm, looks like we've got some studying to do. Don't worry though — that's what I'm here for!"
+        speak_fn(f"Alright, quiz time is over! You got {self.score} out of {self.questions_asked} — that's {percentage} percent. {comment}")
