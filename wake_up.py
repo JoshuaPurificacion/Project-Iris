@@ -34,6 +34,23 @@ def voice_loop(vm, iris, avatar):
                 vm.speak("Switching to idle mode. Hardware tools disabled.", avatar=avatar)
                 continue
 
+            # --- Quiz loop intercept ---
+            if "stop quiz" in text_lower or "end quiz" in text_lower:
+                if hasattr(iris, 'active_quiz') and iris.active_quiz and iris.active_quiz.active:
+                    iris.active_quiz.end(speak_fn=lambda t: vm.speak(t, avatar=avatar))
+                else:
+                    vm.speak("We're not currently in a quiz.", avatar=avatar)
+                continue
+
+            if hasattr(iris, 'active_quiz') and iris.active_quiz and iris.active_quiz.active:
+                with iris.lock:
+                    iris.active_quiz.answer(
+                        user_response=text,
+                        chat_fn=lambda p, save=False, use_tools=False: iris.chat(p, save=save, use_tools=use_tools, avatar=avatar),
+                        speak_fn=lambda t: None # chat already stream-speaks
+                    )
+                continue
+
             # Pass to Iris agent (speaking happens inside chat → _speak_streamed)
             with iris.lock:
                 response_text = iris.chat(text, avatar=avatar)
@@ -63,6 +80,27 @@ def main():
     def on_text_submitted(text):
         print(f"[Text Input] User: {text}")
         iris.reset_idle_timer()
+        
+        text_lower = text.lower()
+        if "stop quiz" in text_lower or "end quiz" in text_lower:
+            if hasattr(iris, 'active_quiz') and iris.active_quiz and iris.active_quiz.active:
+                iris.active_quiz.end(speak_fn=lambda t: vm.speak(t, avatar=avatar))
+            else:
+                vm.speak("We're not currently in a quiz.", avatar=avatar)
+            return
+
+        if hasattr(iris, 'active_quiz') and iris.active_quiz and iris.active_quiz.active:
+            threading.Thread(
+                target=iris.active_quiz.answer,
+                args=(text,),
+                kwargs={
+                    "chat_fn": lambda p, save=False, use_tools=False: iris.chat(p, save=save, use_tools=use_tools, avatar=avatar),
+                    "speak_fn": lambda t: None
+                },
+                daemon=True
+            ).start()
+            return
+
         threading.Thread(
             target=iris.chat,
             args=(text,),

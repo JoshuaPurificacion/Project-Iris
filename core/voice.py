@@ -6,7 +6,7 @@ from faster_whisper import WhisperModel
 import pyttsx3
 from kokoro_onnx import Kokoro
 
-VOICE_PITCH_STEPS = 4
+VOICE_PITCH_STEPS = 5
 MIC_DEVICE_INDEX = 1
 IRIS_SPEAKING = False
 
