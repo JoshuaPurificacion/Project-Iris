@@ -173,7 +173,6 @@ class Iris:
                     # Surprised expression for idle trigger, then brief pause before speaking
                     if avatar is not None:
                         avatar.set_state("surprised")
-                        avatar.window.after(0, lambda: avatar.float_emoji("❗", "#ffffff"))
                     time.sleep(0.3)
 
                     response_text = self.chat(nudge, save=False, use_tools=False, avatar=avatar)
@@ -250,7 +249,6 @@ class Iris:
         if avatar is not None:
             avatar.show_thinking()
             avatar.set_state("thinking")
-            avatar.window.after(0, lambda: avatar.float_emoji("💭", "#ffaa00"))
 
         # ── Streaming call ────────────────────────────────────────────────────
         response_stream = ollama.chat(
@@ -294,7 +292,7 @@ class Iris:
 
                 print(f"[Tool] Iris triggered: {function_name}")
                 if function_name == "trigger_feeder":
-                    omnisense_skill.trigger(chat_fn=self.chat, speak_fn=lambda t: self.vm.speak(t, avatar=avatar), avatar=avatar)
+                    omnisense_skill.trigger(chat_fn=self.chat, speak_fn=lambda t: self.vm.speak(t, avatar=avatar))
                     self.messages.append(tool_message)
                     self.messages.append({
                         "role": "tool",
@@ -304,7 +302,7 @@ class Iris:
                 elif function_name == "start_quiz":
                     from skills.quiz_skill import QuizSession
                     topic = tool_call.get('function', {}).get('arguments', {}).get('topic')
-                    quiz_session = QuizSession(avatar=avatar)
+                    quiz_session = QuizSession()
                     self.active_quiz = quiz_session
                     quiz_session.start(
                         chat_fn=lambda prompt, save=False, use_tools=False: self.chat(prompt, save=save, use_tools=use_tools, avatar=avatar),
