@@ -114,7 +114,7 @@ Ollama (LLM):
 ollama pull qwen2.5
 ```
 
-Kokoro TTS model files (one-time download):
+Kokoro TTS model files:
 ```bash
 python -c "from huggingface_hub import hf_hub_download; hf_hub_download(repo_id='hexgrad/Kokoro-82M', filename='kokoro-v0_19.onnx', local_dir='models/tts')"
 ```
@@ -122,7 +122,7 @@ python -c "from huggingface_hub import hf_hub_download; hf_hub_download(repo_id=
 Download `voices.bin` from: `https://github.com/thewh1teagle/kokoro-onnx/releases`  
 Place in `models/tts/voices.bin`
 
-**4. Set environment variable**
+**4. Set environment variable (for GPU)**
 ```bash
 setx CUDA_VISIBLE_DEVICES "0"
 ```
@@ -130,6 +130,11 @@ setx CUDA_VISIBLE_DEVICES "0"
 **5. Run Iris**
 ```bash
 .venv\Scripts\python.exe wake_up.py
+```
+
+Or use the launcher script:
+```bash
+start_booth.bat
 ```
 
 ---
@@ -140,11 +145,26 @@ setx CUDA_VISIBLE_DEVICES "0"
 |---|---|
 | Talk to Iris | Speak into microphone — VAD detects speech automatically |
 | Type to Iris | Use the text input box on the avatar window |
-| Feed the cat | Say or type "feed the cat" |
+| Feed the cat | Say or type "feed the cat" or "demo feed" |
 | Start a quiz | Say or type "quiz me" |
 | Stop a quiz | Say or type "stop quiz" |
 | Move avatar | Hold click 2 seconds then drag |
 | Bob avatar | Single click |
+
+---
+
+## ⚙️ Environment Variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `MIC_INDEX` | None (OS default) | Override if Windows reassigns audio device |
+| `AEC_MULTIPLIER` | 2.0 | Tune threshold for echo cancellation (higher = less sensitive) |
+
+Set via PowerShell before running:
+```powershell
+$env:MIC_INDEX = "1"
+$env:AEC_MULTIPLIER = "2.5"
+```
 
 ---
 
@@ -154,21 +174,19 @@ setx CUDA_VISIBLE_DEVICES "0"
 Project-Iris/
 ├── core/
 │   ├── iris_agent.py      # LLM brain + tool calling + idle loop
-│   ├── voice.py           # STT + TTS + VAD
-│   ├── memory.py          # Conversation history
-│   └── avatar.py          # tkinter display + animations
+│   ├── voice.py           # STT + TTS + VAD + speech queue
+│   ├── avatar.py          # tkinter display + animations
+│   └── logger.py          # Conversation logging
 ├── skills/
 │   ├── omnisense_skill.py # ESP32-CAM pet feeder trigger
 │   └── quiz_skill.py      # CE quiz with score tracking
 ├── assets/
 │   └── avatar/            # Iris PNG expressions
-│       ├── open_eyes_mouth_close.png
-│       ├── open_eyes_mouth_open.png
-│       ├── close_eyes_mouth_close.png
-│       └── close_eyes_mouth_open.png
 ├── models/
 │   └── tts/               # Kokoro model files (not in repo)
+├── logs/                  # Auto-generated conversation logs
 ├── wake_up.py             # Main entry point
+├── start_booth.bat        # Windows launcher script
 ├── requirements.txt
 ├── ISSUES_LOG.md
 └── README.md

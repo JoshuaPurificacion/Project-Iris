@@ -4,14 +4,17 @@ import threading
 import time
 import random
 
-AVATAR_SIZE = (400, 531)  # Displayed size in pixels — preserves 1792x2380 aspect ratio
+SCALE_FACTOR = 1.5
+AVATAR_SIZE = (int(400 * SCALE_FACTOR), int(531 * SCALE_FACTOR))  # 1.5x larger: 600x797
+EMOJI_SIZE = int(24 * SCALE_FACTOR)  # 1.5x larger emoji: 36
 
 STATES = {
-    "idle":      "assets/avatar/open_eyes_mouth_close.png",
-    "speaking":  "assets/avatar/open_eyes_mouth_open.png",
-    "thinking":  "assets/avatar/close_eyes_mouth_close.png",
+    "idle": "assets/avatar/open_eyes_mouth_close.png",
+    "speaking": "assets/avatar/open_eyes_mouth_open.png",
+    "thinking": "assets/avatar/close_eyes_mouth_close.png",
     "surprised": "assets/avatar/close_eyes_mouth_open.png",
 }
+
 
 class AvatarWindow:
     def __init__(self):
@@ -28,7 +31,9 @@ class AvatarWindow:
         self.images = {}
         for state, path in STATES.items():
             try:
-                img = Image.open(path).convert("RGBA").resize(AVATAR_SIZE, Image.LANCZOS)
+                img = (
+                    Image.open(path).convert("RGBA").resize(AVATAR_SIZE, Image.LANCZOS)
+                )
                 self.images[state] = ImageTk.PhotoImage(img)
             except Exception as e:
                 print(f"[AvatarWindow] Could not load image for state '{state}': {e}")
@@ -42,50 +47,71 @@ class AvatarWindow:
         self.input_frame = tk.Frame(self.window, bg="#2a2a3e")
         self.input_entry = tk.Entry(
             self.input_frame,
-            font=("Arial", 12),
+            font=("Segoe UI", int(10 * SCALE_FACTOR)),
             bg="#2a2a3e",
             fg="white",
             insertbackground="white",
             relief="flat",
-            width=28
+            width=28,
         )
         self.input_entry.pack(side="left", padx=6, pady=4)
         self.send_button = tk.Button(
             self.input_frame,
             text="➤",
-            font=("Arial", 12),
+            font=("Segoe UI", int(10 * SCALE_FACTOR)),
             bg="#e63946",
             fg="white",
             relief="flat",
-            command=self._on_send
+            command=self._on_send,
+        )
+        self.input_entry.pack(side="left", padx=6, pady=4)
+        self.send_button = tk.Button(
+            self.input_frame,
+            text="➤",
+            font=("Segoe UI", int(12 * SCALE_FACTOR)),
+            bg="#e63946",
+            fg="white",
+            relief="flat",
+            command=self._on_send,
         )
         self.send_button.pack(side="right", padx=4)
         self.input_frame.pack(side="bottom", fill="x")
         self.input_entry.bind("<Return>", lambda e: self._on_send())
-        self.on_text_input = None   # wired from wake_up.py
+        self.on_text_input = None  # wired from wake_up.py
 
         # ── Caption bar ───────────────────────────────────────────────────
         self.caption_label = tk.Label(
             self.window,
             text="",
-            font=("Arial Rounded MT Bold", 24),
+            font=("Segoe UI", int(16 * SCALE_FACTOR)),
             fg="white",
             bg="#1a1a2e",
-            wraplength=380,
+            wraplength=int(380 * SCALE_FACTOR),
             justify="center",
-            padx=10,
-            pady=6
+            padx=int(10 * SCALE_FACTOR),
+            pady=int(6 * SCALE_FACTOR),
         )
         self.caption_label.pack(side="bottom", fill="x")
 
         self.status_label = tk.Label(
             self.window,
             text="",
-            font=("Arial Rounded MT Bold", 11),
-            fg="#00ff88",        # bright green
+            font=("Segoe UI", int(9 * SCALE_FACTOR)),
+            fg="#00ff88",  # bright green
             bg="#1a1a2e",
-            padx=8,
-            pady=3
+            padx=int(8 * SCALE_FACTOR),
+            pady=int(3 * SCALE_FACTOR),
+        )
+        self.caption_label.pack(side="bottom", fill="x")
+
+        self.status_label = tk.Label(
+            self.window,
+            text="",
+            font=("Segoe UI", int(9 * SCALE_FACTOR)),
+            fg="#00ff88",  # bright green
+            bg="#1a1a2e",
+            padx=int(8 * SCALE_FACTOR),
+            pady=int(3 * SCALE_FACTOR),
         )
         self.status_label.pack(side="bottom", fill="x")
 
@@ -129,21 +155,19 @@ class AvatarWindow:
         self.window.after(0, lambda: self.caption_label.config(text=""))
 
     def set_status(self, text, color="#00ff88"):
-        self.window.after(0, lambda: self.status_label.config(
-            text=text, fg=color
-        ))
+        self.window.after(0, lambda: self.status_label.config(text=text, fg=color))
 
     def show_listening(self):
-        self.set_status("🎤 Listening...", "#00ff88")   # green
+        self.set_status("🎤 Listening...", "#00ff88")  # green
 
     def show_thinking(self):
-        self.set_status("💭 Thinking...", "#ffaa00")    # amber
+        self.set_status("💭 Thinking...", "#ffaa00")  # amber
 
     def show_speaking(self):
-        self.set_status("🔊 Speaking...", "#4fc3f7")    # blue
+        self.set_status("🔊 Speaking...", "#4fc3f7")  # blue
 
     def show_idle(self):
-        self.set_status("", "#ffffff")                  # clear
+        self.set_status("", "#ffffff")  # clear
 
     def _on_send(self):
         """Called when the user presses Enter or the send button."""
@@ -166,12 +190,12 @@ class AvatarWindow:
             self.jump()
         if self.images.get(state):
             self.label.configure(image=self.images[state])
-            
+
         if state == "speaking":
             self.shake_loop()
         else:
             self.label.place(x=0, y=0)
-            
+
         if state == "idle" and (time.time() - self._caption_time) > 3.0:
             self.clear_caption()
 
@@ -182,8 +206,12 @@ class AvatarWindow:
     def jump(self):
         """Quick 3-frame jump: up → slightly past base → settle."""
         self.window.geometry(f"+{self.base_x}+{self.base_y - 18}")
-        self.window.after(80,  lambda: self.window.geometry(f"+{self.base_x}+{self.base_y + 6}"))
-        self.window.after(140, lambda: self.window.geometry(f"+{self.base_x}+{self.base_y}"))
+        self.window.after(
+            80, lambda: self.window.geometry(f"+{self.base_x}+{self.base_y + 6}")
+        )
+        self.window.after(
+            140, lambda: self.window.geometry(f"+{self.base_x}+{self.base_y}")
+        )
 
     def shake_loop(self):
         """20 fps positional jitter during speaking state."""
@@ -200,9 +228,15 @@ class AvatarWindow:
     def bob(self):
         """Quick double-bounce animation on click."""
         self.window.geometry(f"+{self.base_x}+{self.base_y - 12}")
-        self.window.after(80,  lambda: self.window.geometry(f"+{self.base_x}+{self.base_y + 8}"))
-        self.window.after(160, lambda: self.window.geometry(f"+{self.base_x}+{self.base_y - 5}"))
-        self.window.after(220, lambda: self.window.geometry(f"+{self.base_x}+{self.base_y}"))
+        self.window.after(
+            80, lambda: self.window.geometry(f"+{self.base_x}+{self.base_y + 8}")
+        )
+        self.window.after(
+            160, lambda: self.window.geometry(f"+{self.base_x}+{self.base_y - 5}")
+        )
+        self.window.after(
+            220, lambda: self.window.geometry(f"+{self.base_x}+{self.base_y}")
+        )
 
     # ------------------------------------------------------------------ #
     #  Interaction handlers                                                #
@@ -245,14 +279,41 @@ class AvatarWindow:
                 continue
 
             # Close eyes
-            self.window.after(0, lambda: self.label.configure(image=self.images["thinking"]) if self.images.get("thinking") else None)
-            
+            self.window.after(
+                0,
+                lambda: (
+                    self.label.configure(image=self.images["thinking"])
+                    if self.images.get("thinking")
+                    else None
+                ),
+            )
+
             # Eyes open after 150 ms
             time.sleep(0.15)
 
             # Reopen eyes — only if still idle
             if self.current_state == "idle":
-                self.window.after(0, lambda: self.label.configure(image=self.images["idle"]) if self.images.get("idle") else None)
+                self.window.after(
+                    0,
+                    lambda: (
+                        self.label.configure(image=self.images["idle"])
+                        if self.images.get("idle")
+                        else None
+                    ),
+                )
+
+    def float_emoji(self, emoji, color="#ffff00", duration=2000):
+        """Display an emoji briefly that disappears after duration."""
+        window_width = self.window.winfo_width()
+        window_height = self.window.winfo_height()
+
+        label = tk.Label(
+            self.window, text=emoji, font=("Segoe UI", EMOJI_SIZE), fg=color, bg="black"
+        )
+        label.place(x=window_width // 2 - 20, y=window_height // 2 - 80)
+
+        # Remove after duration
+        self.window.after(duration, label.destroy)
 
     # ------------------------------------------------------------------ #
     #  Entry point (blocks on main thread)                                 #

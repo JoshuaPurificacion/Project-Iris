@@ -1,0 +1,12 @@
+[23:21:39] 💬 CAPTION: You are asking about hello.
+[23:21:42] 💬 CAPTION: Come closer, let me show you how OmniSense works!
+[23:21:43] 💬 CAPTION: [gestures towards the setup]
+[23:21:43] 🤖 IRIS:  You are asking about hello. Come closer, let me show you how OmniSense works! [gestures towards the setup]
+[23:21:51] 💬 CAPTION: You are asking about what.
+[23:21:53] 💬 CAPTION: OmniSense is a smart pet feeder that uses computer vision to ensure the bowl is truly empty before dispensing food.
+[23:21:55] 💬 CAPTION: This prevents overfeeding and ensures accuracy.
+[23:21:56] 🤖 IRIS:  You are asking about what. OmniSense is a smart pet feeder that uses computer vision to ensure the bowl is truly empty before dispensing food. This prevents overfeeding and ensures accuracy.
+[23:22:10] 💬 CAPTION: Then it processes images in under 200 milliseconds using an ESP32-CAM and Python script with Canny Edge Detection.
+[23:22:12] 💬 CAPTION: If the bowl looks smooth, it dispenses food.
+[23:22:13] 💬 CAPTION: Safety sensors also ensure feeding only occurs when pets are present and conditions are right.
+[23:22:14] 🤖 IRIS:  Then it processes images in under 200 milliseconds using an ESP32-CAM and Python script with Canny Edge Detection. If the bowl looks smooth, it dispenses food. Safety sensors also ensure feeding only occurs when pets are present and conditions are right.
