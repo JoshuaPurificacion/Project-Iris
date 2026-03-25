@@ -50,6 +50,7 @@ AVAILABLE_TOOLS = [
                             "rainwater_harvesting",
                             "smart_lock",
                             "omnisense",
+                            "smart_ergonomic_backpack",
                         ],
                     }
                 },
@@ -100,6 +101,9 @@ Smart system that gathers rainwater from rooftops, filters it, and stores in a t
 
 5. Three Verification Smart Lock (smart_lock.jpg):
 High-security mini vault with multi-layered authentication to prevent digital hacking and physical theft. Remains locked until PIR (thermal) + ultrasonic detect human presence. Password entry via IR sensors. Load cell senses forced removal and triggers buzzer alarm.
+
+6. Arduino-Based Smart Ergonomic Backpack with Load Sensing and Overweight Alert System (smart_ergonomic_backpack.jpg):
+A system designed to detect the weight carried inside the backpack using a load-sensing mechanism and to provide an immediate warning once the load exceeds a preset threshold. By integrating real-time sensing and alert features, the prototype aims to support safer load carriage and improve user awareness of backpack weight.
 """
 
 PROTOTYPE_IMAGES = {
@@ -109,6 +113,7 @@ PROTOTYPE_IMAGES = {
     "rainwater_harvesting": "assets/prototype_images/rainwater_harvesting.jpg",
     "smart_lock": "assets/prototype_images/smart_lock.jpg",
     "omnisense": "assets/prototype_images/omnisense.jpg",
+    "smart_ergonomic_backpack": "assets/prototype_images/smart_ergonomic_backpack.jpg",
 }
 
 SYSTEM_PROMPT = f"""You are Iris, a sweet, witty, and highly intelligent AI booth assistant at the University of the East "Arduin-o-vation" engineering exhibit. You can discuss any of the projects on display.
@@ -308,8 +313,8 @@ class Iris:
                         image_key = key
                         break
                 if not image_key:
-                    # Default to omniSense for generic mentions
-                    image_key = "smart_lock"  # fallback
+                    # Default to omnisense for generic mentions
+                    image_key = "omnisense"  # fallback
                 tool_calls = [
                     {
                         "function": {

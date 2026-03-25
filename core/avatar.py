@@ -172,6 +172,7 @@ class AvatarWindow:
             "rainwater_harvesting": "assets/prototype_images/rainwater_harvesting.jpg",
             "smart_lock": "assets/prototype_images/smart_lock.jpg",
             "omnisense": "assets/prototype_images/omnisense.jpg",
+            "smart_ergonomic_backpack": "assets/prototype_images/smart_ergonomic_backpack.jpg",
         }
 
         self.project_keywords = {
@@ -192,6 +193,13 @@ class AvatarWindow:
                 "irrigation",
             ],
             "smart_lock": ["smart lock", "vault", "security", "three verification"],
+            "smart_ergonomic_backpack": [
+                "backpack",
+                "ergonomic",
+                "load sensing",
+                "weight alert",
+                "overweight",
+            ],
         }
 
         self.current_state = "idle"
