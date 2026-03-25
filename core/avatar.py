@@ -4,6 +4,8 @@ import threading
 import time
 import random
 
+from core.logger import log_system
+
 SCALE_FACTOR = 1.5
 AVATAR_SIZE = (int(400 * SCALE_FACTOR), int(531 * SCALE_FACTOR))  # 1.5x larger: 600x797
 EMOJI_SIZE = int(24 * SCALE_FACTOR)  # 1.5x larger emoji: 36
@@ -14,6 +16,49 @@ STATES = {
     "thinking": "assets/avatar/close_eyes_mouth_close.png",
     "surprised": "assets/avatar/close_eyes_mouth_open.png",
 }
+
+
+class PrototypeWindow:
+    def __init__(self, parent_window):
+        self.window = tk.Toplevel(parent_window)
+        self.window.withdraw()
+        self.window.configure(bg="#1a1a2e")
+        self.window.overrideredirect(True)
+        self.window.attributes("-topmost", True)
+
+        self.label = tk.Label(self.window, bg="#1a1a2e")
+        self.label.pack()
+
+        self.current_image = None
+
+    def show(self, image_path, target_height, anchor_y):
+        try:
+            img = Image.open(image_path)
+            aspect_ratio = img.width / img.height
+            new_width = int(target_height * aspect_ratio)
+            img = img.resize((new_width, target_height), Image.LANCZOS)
+            self.current_image = ImageTk.PhotoImage(img)
+            self.label.configure(image=self.current_image)
+
+            self.window.update_idletasks()
+
+            # --- THE "LEFT ANCHOR" MATH ---
+            padding_left = 50  # 50 pixels from the left edge of the monitor
+
+            self.window.geometry(
+                f"{new_width}x{target_height}+{padding_left}+{anchor_y}"
+            )
+
+            self.window.deiconify()
+        except Exception as e:
+            print(f"[PrototypeWindow] Could not load image {image_path}: {e}")
+
+    def hide(self):
+        self.window.withdraw()
+        self.current_image = None
+
+    def is_visible(self):
+        return self.window.winfo_viewable()
 
 
 class AvatarWindow:
@@ -102,17 +147,6 @@ class AvatarWindow:
             padx=int(8 * SCALE_FACTOR),
             pady=int(3 * SCALE_FACTOR),
         )
-        self.caption_label.pack(side="bottom", fill="x")
-
-        self.status_label = tk.Label(
-            self.window,
-            text="",
-            font=("Segoe UI", int(9 * SCALE_FACTOR)),
-            fg="#00ff88",  # bright green
-            bg="#1a1a2e",
-            padx=int(8 * SCALE_FACTOR),
-            pady=int(3 * SCALE_FACTOR),
-        )
         self.status_label.pack(side="bottom", fill="x")
 
         # Position bottom-right
@@ -126,6 +160,39 @@ class AvatarWindow:
         self.base_y = screen_h - win_h - margin - 40  # above taskbar
         # Lock size so place() doesn't collapse the window
         self.window.geometry(f"{win_w}x{win_h}+{self.base_x}+{self.base_y}")
+
+        # Prototype window (hologram display) - create before positioning
+        self.prototype_window = PrototypeWindow(self.window)
+
+        # --- DETERMINISTIC IMAGE WATCHDOG ---
+        self.prototype_images = {
+            "car_parking": "assets/prototype_images/car_parking.jpg",
+            "smart_light_saving": "assets/prototype_images/smart_light_saving.jpg",
+            "flood_management": "assets/prototype_images/flood_management.jpg",
+            "rainwater_harvesting": "assets/prototype_images/rainwater_harvesting.jpg",
+            "smart_lock": "assets/prototype_images/smart_lock.jpg",
+            "omnisense": "assets/prototype_images/omnisense.jpg",
+        }
+
+        self.project_keywords = {
+            "omnisense": [
+                "omnisense",
+                "pet feeder",
+                "food dispenser",
+                "canny",
+                "edge detection",
+            ],
+            "car_parking": ["car parking", "street light", "parking detection"],
+            "smart_light_saving": ["smart light", "energy saving", "occupancy"],
+            "flood_management": ["flood", "water level", "floodgate"],
+            "rainwater_harvesting": [
+                "rainwater",
+                "harvesting",
+                "soil moisture",
+                "irrigation",
+            ],
+            "smart_lock": ["smart lock", "vault", "security", "three verification"],
+        }
 
         self.current_state = "idle"
         self._caption_time = 0.0
@@ -146,9 +213,18 @@ class AvatarWindow:
     # ------------------------------------------------------------------ #
 
     def show_caption(self, text):
-        """Display text in the caption bar."""
+        """Display text in the caption bar and check for image triggers."""
+        log_system(f"[WATCHDOG] Received: {text[:60]}...")
         self._caption_time = time.time()
         self.window.after(0, lambda: self.caption_label.config(text=text))
+
+        # --- THE WATCHDOG INTERCEPT ---
+        lower_text = text.lower()
+        for image_key, keywords in self.project_keywords.items():
+            if any(kw in lower_text for kw in keywords):
+                log_system(f"[WATCHDOG] TRIGGER MATCH! Opening '{image_key}'")
+                self.show_prototype(image_key)
+                break
 
     def clear_caption(self):
         """Clear text in the caption bar."""
@@ -158,16 +234,38 @@ class AvatarWindow:
         self.window.after(0, lambda: self.status_label.config(text=text, fg=color))
 
     def show_listening(self):
-        self.set_status("🎤 Listening...", "#00ff88")  # green
+        self.set_status("Listening...", "#00ff88")  # green
 
     def show_thinking(self):
-        self.set_status("💭 Thinking...", "#ffaa00")  # amber
+        self.set_status("Thinking...", "#ffaa00")  # amber
 
     def show_speaking(self):
-        self.set_status("🔊 Speaking...", "#4fc3f7")  # blue
+        self.set_status("Speaking...", "#4fc3f7")  # blue
 
     def show_idle(self):
         self.set_status("", "#ffffff")  # clear
+
+    # ------------------------------------------------------------------ #
+    #  Prototype (hologram) display                                       #
+    # ------------------------------------------------------------------ #
+    def show_prototype(self, image_key, image_paths=None):
+        """Thread-safe call to show a prototype image."""
+        self.window.after(0, lambda: self._apply_show_prototype(image_key, image_paths))
+
+    def _apply_show_prototype(self, image_key, image_paths):
+        """Internal method executed on the main UI thread."""
+        paths = image_paths if image_paths else self.prototype_images
+        if image_key not in paths:
+            return
+        image_path = paths[image_key]
+        target_height = AVATAR_SIZE[1]
+
+        # Pass Iris's base_y so the image sits level with her
+        self.prototype_window.show(image_path, target_height, self.base_y)
+
+    def hide_prototype(self):
+        """Thread-safe call to hide the prototype window."""
+        self.window.after(0, self.prototype_window.hide)
 
     def _on_send(self):
         """Called when the user presses Enter or the send button."""

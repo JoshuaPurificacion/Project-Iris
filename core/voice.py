@@ -120,8 +120,12 @@ class VoiceManager:
             # Sequential Cleanup (Only runs AFTER audio finishes)
             self.is_speaking.clear()
             self.is_interruptible.clear()
-            if avatar and avatar.current_state != "surprised":
-                avatar.set_state("idle")
+            if avatar:
+                if avatar.current_state != "surprised":
+                    avatar.set_state("idle")
+                # Only hide prototype if no more sentences are queued (thread-safe)
+                if self.speech_queue.empty() and hasattr(avatar, "hide_prototype"):
+                    avatar.hide_prototype()
 
         except Exception as e:
             log_system(f"TTS: Kokoro failed ({e}), using pyttsx3 fallback")
@@ -137,8 +141,12 @@ class VoiceManager:
 
                 self.is_speaking.clear()
                 self.is_interruptible.clear()
-                if avatar and avatar.current_state != "surprised":
-                    avatar.set_state("idle")
+                if avatar:
+                    if avatar.current_state != "surprised":
+                        avatar.set_state("idle")
+                    # Only hide prototype if no more sentences are queued (thread-safe)
+                    if self.speech_queue.empty() and hasattr(avatar, "hide_prototype"):
+                        avatar.hide_prototype()
 
             except Exception as e2:
                 log_system(f"TTS: pyttsx3 also failed: {e2}")
@@ -146,6 +154,9 @@ class VoiceManager:
                 self.is_interruptible.clear()
                 if avatar:
                     avatar.set_state("idle")
+                    # Only hide prototype if no more sentences are queued (thread-safe)
+                    if self.speech_queue.empty() and hasattr(avatar, "hide_prototype"):
+                        avatar.hide_prototype()
                 print(f"[TTS FALLBACK] {text}")
 
     def listen(self, avatar=None):
@@ -183,7 +194,7 @@ class VoiceManager:
                     if self.is_interruptible.is_set() and volume > (
                         self.SPEAKING_THRESHOLD * AEC_MULTIPLIER
                     ):
-                        print("[VoiceManager] 💥 NUDGE INTERRUPTED! Stopping TTS...")
+                        print("[VoiceManager] NUDGE INTERRUPTED! Stopping TTS...")
                         sd.stop()
 
                         # --- THE FLUSH ---

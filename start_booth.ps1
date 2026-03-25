@@ -10,7 +10,7 @@ Write-Host "  Project Iris - Arduin-o-vation" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Configuration:" -ForegroundColor Yellow
-Write-Host "  MIC_INDEX:     $($env:MIC_INDEX ?? 'OS Default')"
+Write-Host "  MIC_INDEX:     $(if ($env:MIC_INDEX) { $env:MIC_INDEX } else { 'OS Default' })"
 Write-Host "  AEC_MULTIPLIER: $env:AEC_MULTIPLIER"
 Write-Host ""
 
