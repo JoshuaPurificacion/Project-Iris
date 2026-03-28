@@ -10,16 +10,6 @@ import sys
 import threading
 import time
 
-START_GAME_TRIGGERS = [
-    "start game", "play game", "start rpg", "play rpg",
-    "let's play", "lets play", "start dungeon", "play dungeon",
-    "start adventure", "play adventure",
-]
-STOP_GAME_TRIGGERS = [
-    "stop game", "end game", "quit game", "exit game",
-    "stop rpg", "quit rpg", "stop dungeon", "stop adventure",
-]
-
 MANUAL_FEED_TRIGGERS = [
     "manual feed",
     "demo feed",
@@ -33,9 +23,9 @@ MANUAL_FEED_TRIGGERS = [
 ]
 
 # ── RPG game state (shared between handle_input and rpg_game_loop) ──────────
-_rpg_game      = None
-_rpg_running   = False
-_rpg_lock      = threading.Lock()
+_rpg_game = None
+_rpg_running = False
+_rpg_lock = threading.Lock()
 
 
 def rpg_game_loop(iris, avatar, game_window):
@@ -91,6 +81,33 @@ def rpg_game_loop(iris, avatar, game_window):
         _rpg_game = None
 
 
+def handle_game_action(action, iris, avatar, game_window):
+    global _rpg_running, _rpg_game
+
+    if action == "stop_game":
+        with _rpg_lock:
+            if _rpg_running:
+                _rpg_running = False
+                _rpg_game = None
+        iris.switch_mode("default", avatar=avatar)
+        if game_window:
+            game_window.hide()
+        iris.vm.speak("Closing the game. Back to normal mode.", avatar=avatar)
+
+    elif action == "start_micro_rpg":
+        with _rpg_lock:
+            if _rpg_running:
+                iris.vm.speak(
+                    "A game is already running. Stop it first.", avatar=avatar
+                )
+                return
+            _rpg_running = True
+        iris.switch_mode("gaming", avatar=avatar)
+        threading.Thread(
+            target=rpg_game_loop, args=(iris, avatar, game_window), daemon=True
+        ).start()
+
+
 def handle_input(text, iris, avatar, game_window=None):
     global _rpg_running, _rpg_game
 
@@ -101,33 +118,6 @@ def handle_input(text, iris, avatar, game_window=None):
         except Exception as e:
             log_system(f"Flush failed: {e}")
     text_lower = text.lower()
-
-    # ── Stop game ─────────────────────────────────────────────────────────────
-    if any(phrase in text_lower for phrase in STOP_GAME_TRIGGERS):
-        with _rpg_lock:
-            if _rpg_running:
-                _rpg_running = False
-                _rpg_game = None
-        iris.switch_mode("default", avatar=avatar)
-        if game_window:
-            game_window.hide()
-        iris.vm.speak("Closing the dungeon. Back to normal mode.", avatar=avatar)
-        return
-
-    # ── Start game ────────────────────────────────────────────────────────────
-    if any(phrase in text_lower for phrase in START_GAME_TRIGGERS):
-        with _rpg_lock:
-            if _rpg_running:
-                iris.vm.speak("A game is already running. Say stop game first.", avatar=avatar)
-                return
-            _rpg_running = True
-        iris.switch_mode("gaming_rpg", avatar=avatar)
-        threading.Thread(
-            target=rpg_game_loop,
-            args=(iris, avatar, game_window),
-            daemon=True
-        ).start()
-        return
 
     # Check stop quiz first
     if any(phrase in text.lower() for phrase in ["stop quiz", "end quiz", "quit quiz"]):
@@ -240,6 +230,11 @@ def main():
 
     # --- Mode switch callback ---
     avatar.on_mode_switch = lambda mode: iris.switch_mode(mode, avatar=avatar)
+
+    # --- Game action callback ---
+    avatar.on_game_action = lambda action: handle_game_action(
+        action, iris, avatar, game_window
+    )
 
     # --- Pre-warm LLM in background to avoid blocking ---
     print("Pre-warming LLM into VRAM...")

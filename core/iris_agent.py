@@ -10,10 +10,10 @@ from core.vision import get_screen_text
 
 import modes.exhibit as exhibit_mode
 import modes.default as default_mode
-import modes.gaming_rpg as gaming_rpg_mode
+import modes.gaming as gaming_mode
 from skills import omnisense_skill
 
-MODES = {"exhibit": exhibit_mode, "default": default_mode, "gaming_rpg": gaming_rpg_mode}
+MODES = {"exhibit": exhibit_mode, "default": default_mode, "gaming": gaming_mode}
 
 LLM_MODEL = "qwen2.5:latest"
 
@@ -78,11 +78,16 @@ class Iris:
                         continue
                     if "content" in msg:
                         self.messages.append(
-                            {"role": msg.get("role", "assistant"), "content": msg["content"]}
+                            {
+                                "role": msg.get("role", "assistant"),
+                                "content": msg["content"],
+                            }
                         )
                 self._trim_history()
                 if len(prior_messages) > 0:
-                    log_system(f"Loaded {len(prior_messages)} prior turns from {self.history_path}.")
+                    log_system(
+                        f"Loaded {len(prior_messages)} prior turns from {self.history_path}."
+                    )
         except FileNotFoundError:
             return
         except json.JSONDecodeError:
@@ -184,7 +189,9 @@ class Iris:
         for idx, (user_text, assistant_text) in enumerate(pairs[-limit:], 1):
             user_snip = (user_text[:120] + "...") if len(user_text) > 120 else user_text
             assistant_snip = (
-                (assistant_text[:120] + "...") if len(assistant_text) > 120 else assistant_text
+                (assistant_text[:120] + "...")
+                if len(assistant_text) > 120
+                else assistant_text
             )
             lines.append(f"{idx}. You: {user_snip} | Iris: {assistant_snip}")
         return "Recent interactions:\n" + "\n".join(lines)
@@ -286,8 +293,8 @@ class Iris:
 
             # Execute chat outside the lock to prevent deadlocking with chat()'s own lock
             time.sleep(0.3)
-            
-            if response_text is None and 'nudge_prompt' in locals():
+
+            if response_text is None and "nudge_prompt" in locals():
                 response_text = self.chat(
                     nudge_prompt, save=False, use_tools=False, avatar=avatar
                 )
@@ -297,7 +304,9 @@ class Iris:
                 print(f"Iris (Idle): {response_text}")
                 with self.lock:
                     self.last_was_idle = True
-                    self.messages.append({"role": "assistant", "content": response_text})
+                    self.messages.append(
+                        {"role": "assistant", "content": response_text}
+                    )
                 self.reset_idle_timer()
 
     def _speak_streamed(self, response_stream, avatar=None):

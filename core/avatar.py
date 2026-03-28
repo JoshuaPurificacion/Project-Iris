@@ -6,9 +6,10 @@ import random
 
 from core.logger import log_system
 
-SCALE_FACTOR = 1.5
-AVATAR_SIZE = (int(400 * SCALE_FACTOR), int(531 * SCALE_FACTOR))  # 1.5x larger: 600x797
-EMOJI_SIZE = int(24 * SCALE_FACTOR)  # 1.5x larger emoji: 36
+BASE_AVATAR_SIZE = (400, 531)
+BASE_EMOJI_SIZE = 24
+DEFAULT_SCALE = 1.5
+SMALL_SCALE = DEFAULT_SCALE / 2
 
 STATES = {
     "idle": "assets/avatar/open_eyes_mouth_close.png",
@@ -67,22 +68,26 @@ class AvatarWindow:
         self.window.title("Iris")
         self.window.configure(bg="black")
 
+        self.scale_factor = SMALL_SCALE
+        self._recompute_metrics()
+
         # Window chrome
         self.window.overrideredirect(True)
         self.window.attributes("-topmost", True)
         self.window.attributes("-transparentcolor", "black")
 
-        # Load all state images
-        self.images = {}
+        # Load all state images (store base, resize per scale)
+        self.base_images = {}
         for state, path in STATES.items():
             try:
-                img = (
-                    Image.open(path).convert("RGBA").resize(AVATAR_SIZE, Image.LANCZOS)
-                )
-                self.images[state] = ImageTk.PhotoImage(img)
+                img = Image.open(path).convert("RGBA")
+                self.base_images[state] = img
             except Exception as e:
                 print(f"[AvatarWindow] Could not load image for state '{state}': {e}")
-                self.images[state] = None
+                self.base_images[state] = None
+
+        self.images = {}
+        self._refresh_images(update_label=False)
 
         # Display label directly in window
         self.label = tk.Label(self.window, image=self.images["idle"], bg="black", bd=0)
@@ -92,7 +97,7 @@ class AvatarWindow:
         self.input_frame = tk.Frame(self.window, bg="#2a2a3e")
         self.input_entry = tk.Entry(
             self.input_frame,
-            font=("Segoe UI", int(10 * SCALE_FACTOR)),
+            font=("Segoe UI", self.input_font_size),
             bg="#2a2a3e",
             fg="white",
             insertbackground="white",
@@ -103,17 +108,7 @@ class AvatarWindow:
         self.send_button = tk.Button(
             self.input_frame,
             text="➤",
-            font=("Segoe UI", int(10 * SCALE_FACTOR)),
-            bg="#e63946",
-            fg="white",
-            relief="flat",
-            command=self._on_send,
-        )
-        self.input_entry.pack(side="left", padx=6, pady=4)
-        self.send_button = tk.Button(
-            self.input_frame,
-            text="➤",
-            font=("Segoe UI", int(12 * SCALE_FACTOR)),
+            font=("Segoe UI", self.send_font_size),
             bg="#e63946",
             fg="white",
             relief="flat",
@@ -128,24 +123,24 @@ class AvatarWindow:
         self.caption_label = tk.Label(
             self.window,
             text="",
-            font=("Segoe UI", int(16 * SCALE_FACTOR)),
+            font=("Segoe UI", self.caption_font_size),
             fg="white",
             bg="#1a1a2e",
-            wraplength=int(380 * SCALE_FACTOR),
+            wraplength=self.caption_wrap,
             justify="center",
-            padx=int(10 * SCALE_FACTOR),
-            pady=int(6 * SCALE_FACTOR),
+            padx=self.caption_padx,
+            pady=self.caption_pady,
         )
         self.caption_label.pack(side="bottom", fill="x")
 
         self.status_label = tk.Label(
             self.window,
             text="",
-            font=("Segoe UI", int(9 * SCALE_FACTOR)),
+            font=("Segoe UI", self.status_font_size),
             fg="#00ff88",  # bright green
             bg="#1a1a2e",
-            padx=int(8 * SCALE_FACTOR),
-            pady=int(3 * SCALE_FACTOR),
+            padx=self.status_padx,
+            pady=self.status_pady,
         )
         self.status_label.pack(side="bottom", fill="x")
 
@@ -164,43 +159,9 @@ class AvatarWindow:
         # Prototype window (hologram display) - create before positioning
         self.prototype_window = PrototypeWindow(self.window)
 
-        # --- DETERMINISTIC IMAGE WATCHDOG ---
-        self.prototype_images = {
-            "car_parking": "assets/prototype_images/car_parking.jpg",
-            "smart_light_saving": "assets/prototype_images/smart_light_saving.jpg",
-            "flood_management": "assets/prototype_images/flood_management.jpg",
-            "rainwater_harvesting": "assets/prototype_images/rainwater_harvesting.jpg",
-            "smart_lock": "assets/prototype_images/smart_lock.jpg",
-            "omnisense": "assets/prototype_images/omnisense.jpg",
-            "smart_ergonomic_backpack": "assets/prototype_images/smart_ergonomic_backpack.jpg",
-        }
-
-        self.project_keywords = {
-            "omnisense": [
-                "omnisense",
-                "pet feeder",
-                "food dispenser",
-                "canny",
-                "edge detection",
-            ],
-            "car_parking": ["car parking", "street light", "parking detection"],
-            "smart_light_saving": ["smart light", "energy saving", "occupancy"],
-            "flood_management": ["flood", "water level", "floodgate"],
-            "rainwater_harvesting": [
-                "rainwater",
-                "harvesting",
-                "soil moisture",
-                "irrigation",
-            ],
-            "smart_lock": ["smart lock", "vault", "security", "three verification"],
-            "smart_ergonomic_backpack": [
-                "backpack",
-                "ergonomic",
-                "load sensing",
-                "weight alert",
-                "overweight",
-            ],
-        }
+        # --- DETERMINISTIC IMAGE WATCHDOG (Loaded Dynamically) ---
+        self.prototype_images = {}
+        self.project_keywords = {}
 
         self.current_state = "idle"
         self._caption_time = 0.0
@@ -215,6 +176,90 @@ class AvatarWindow:
         self.label.bind("<ButtonPress-1>", self.on_press)
         self.label.bind("<B1-Motion>", self.on_drag)
         self.label.bind("<ButtonRelease-1>", self.on_release)
+
+        # Mode switcher menu
+        self.on_mode_switch = None
+        self.current_mode = tk.StringVar(value="default")
+        self.size_mode = tk.StringVar(value="small")
+
+        self.context_menu = tk.Menu(
+            self.window, tearoff=0, bg="#2a2a3e", fg="white", font=("Segoe UI", 10)
+        )
+        self.context_menu.add_radiobutton(
+            label="Exhibit Mode",
+            variable=self.current_mode,
+            value="exhibit",
+            command=self._trigger_mode_switch,
+        )
+        self.context_menu.add_radiobutton(
+            label="Default Mode",
+            variable=self.current_mode,
+            value="default",
+            command=self._trigger_mode_switch,
+        )
+
+        # ---- Games Submenu ----
+        self.on_game_action = None
+        self.games_menu = tk.Menu(
+            self.context_menu,
+            tearoff=0,
+            bg="#2a2a3e",
+            fg="white",
+            font=("Segoe UI", 10),
+        )
+        self.games_menu.add_command(
+            label="🎮 Play Micro RPG",
+            command=lambda: self._trigger_game_action("start_micro_rpg"),
+        )
+        self.games_menu.add_command(
+            label="🛑 Stop Current Game",
+            command=lambda: self._trigger_game_action("stop_game"),
+        )
+        self.context_menu.add_cascade(label="Games", menu=self.games_menu)
+        # -----------------------
+
+        self.context_menu.add_separator()
+        self.context_menu.add_radiobutton(
+            label="Large Size",
+            variable=self.size_mode,
+            value="large",
+            command=lambda: self._change_size(DEFAULT_SCALE),
+        )
+        self.context_menu.add_radiobutton(
+            label="Small Size (default)",
+            variable=self.size_mode,
+            value="small",
+            command=lambda: self._change_size(SMALL_SCALE),
+        )
+
+        self.label.bind("<Button-3>", self.show_context_menu)
+
+    # ------------------------------------------------------------------ #
+    #  Mode switching                                                       #
+    # ------------------------------------------------------------------ #
+
+    def show_context_menu(self, event):
+        """Pop up the right-click menu at the mouse cursor."""
+        self.context_menu.tk_popup(event.x_root, event.y_root)
+
+    def _trigger_mode_switch(self):
+        """Fire the callback when a menu item is clicked."""
+        selected_mode = self.current_mode.get()
+        if self.on_mode_switch:
+            self.on_mode_switch(selected_mode)
+
+    def _trigger_game_action(self, action):
+        """Fire the callback for a game menu item."""
+        if self.on_game_action:
+            self.on_game_action(action)
+
+    def load_watchdog_data(self, images_dict, keywords_dict):
+        """Called by the core agent during a mode switch to update UI triggers."""
+        self.prototype_images = images_dict
+        self.project_keywords = keywords_dict
+        log_system(
+            f"[UI] Watchdog data refreshed. Active triggers: {len(self.project_keywords)}"
+        )
 
     # ------------------------------------------------------------------ #
     #  Caption + text input                                                #
@@ -231,7 +276,7 @@ class AvatarWindow:
         for image_key, keywords in self.project_keywords.items():
             if any(kw in lower_text for kw in keywords):
                 log_system(f"[WATCHDOG] TRIGGER MATCH! Opening '{image_key}'")
-                self.show_prototype(image_key)
+                self.window.after(0, lambda k=image_key: self.show_prototype(k))
                 break
 
     def clear_caption(self):
@@ -266,7 +311,7 @@ class AvatarWindow:
         if image_key not in paths:
             return
         image_path = paths[image_key]
-        target_height = AVATAR_SIZE[1]
+        target_height = self.avatar_size[1]
 
         # Pass Iris's base_y so the image sits level with her
         self.prototype_window.show(image_path, target_height, self.base_y)
@@ -414,7 +459,11 @@ class AvatarWindow:
         window_height = self.window.winfo_height()
 
         label = tk.Label(
-            self.window, text=emoji, font=("Segoe UI", EMOJI_SIZE), fg=color, bg="black"
+            self.window,
+            text=emoji,
+            font=("Segoe UI", self.emoji_size),
+            fg=color,
+            bg="black",
         )
         label.place(x=window_width // 2 - 20, y=window_height // 2 - 80)
 
@@ -428,3 +477,69 @@ class AvatarWindow:
     def run(self):
         """Start the tkinter event loop. Must be called from the main thread."""
         self.window.mainloop()
+
+    # ------------------------------------------------------------------ #
+    #  Scaling helpers                                                    #
+    # ------------------------------------------------------------------ #
+
+    def _recompute_metrics(self):
+        self.avatar_size = (
+            int(BASE_AVATAR_SIZE[0] * self.scale_factor),
+            int(BASE_AVATAR_SIZE[1] * self.scale_factor),
+        )
+        self.emoji_size = int(BASE_EMOJI_SIZE * self.scale_factor)
+        self.input_font_size = int(10 * self.scale_factor)
+        self.send_font_size = int(12 * self.scale_factor)
+        self.caption_font_size = int(16 * self.scale_factor)
+        self.caption_wrap = int(380 * self.scale_factor)
+        self.caption_padx = int(10 * self.scale_factor)
+        self.caption_pady = int(6 * self.scale_factor)
+        self.status_font_size = int(9 * self.scale_factor)
+        self.status_padx = int(8 * self.scale_factor)
+        self.status_pady = int(3 * self.scale_factor)
+
+    def _refresh_images(self, update_label=True):
+        for state, base_img in self.base_images.items():
+            if base_img:
+                resized = base_img.resize(self.avatar_size, Image.LANCZOS)
+                self.images[state] = ImageTk.PhotoImage(resized)
+            else:
+                self.images[state] = None
+
+        if update_label and getattr(self, "label", None):
+            current = self.images.get(self.current_state) or self.images.get("idle")
+            if current:
+                self.label.configure(image=current)
+
+            self.window.update_idletasks()
+            win_w = self.window.winfo_reqwidth()
+            win_h = self.window.winfo_reqheight()
+            self.window.geometry(f"{win_w}x{win_h}+{self.base_x}+{self.base_y}")
+
+    def _apply_scale_to_widgets(self):
+        self.input_entry.configure(font=("Segoe UI", self.input_font_size))
+        self.send_button.configure(font=("Segoe UI", self.send_font_size))
+        self.caption_label.configure(
+            font=("Segoe UI", self.caption_font_size),
+            wraplength=self.caption_wrap,
+            padx=self.caption_padx,
+            pady=self.caption_pady,
+        )
+        self.status_label.configure(
+            font=("Segoe UI", self.status_font_size),
+            padx=self.status_padx,
+            pady=self.status_pady,
+        )
+
+        self.window.update_idletasks()
+        win_w = self.window.winfo_reqwidth()
+        win_h = self.window.winfo_reqheight()
+        self.window.geometry(f"{win_w}x{win_h}+{self.base_x}+{self.base_y}")
+
+    def _change_size(self, scale):
+        if abs(scale - self.scale_factor) < 1e-6:
+            return
+        self.scale_factor = scale
+        self._recompute_metrics()
+        self._refresh_images()
+        self._apply_scale_to_widgets()
