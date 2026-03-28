@@ -22,6 +22,8 @@ MANUAL_FEED_TRIGGERS = [
     "trigger feeder",
 ]
 
+from skills import balatro_skill
+
 # ── RPG game state (shared between handle_input and rpg_game_loop) ──────────
 _rpg_game = None
 _rpg_running = False
@@ -110,9 +112,17 @@ def handle_game_action(action, iris, avatar, game_window):
             if _rpg_running:
                 _rpg_running = False
                 _rpg_game = None
+        balatro_skill.stop_balatro()
+        iris.switch_mode("default", avatar=avatar)
         if game_window:
             game_window.hide()
-        iris.switch_mode("default", avatar=avatar)
+        # Shift her out of the dungeon persona so she can reflect casually
+        iris.chat(
+            "System Note: The game has ended. You are no longer in character. Talk to Josh normally about how the run went.",
+            save=True,
+            use_tools=False,
+            avatar=avatar,
+        )
 
     elif action == "start_micro_rpg":
         with _rpg_lock:
@@ -123,10 +133,20 @@ def handle_game_action(action, iris, avatar, game_window):
                 )
                 return
             _rpg_running = True
-        iris.switch_mode("gaming", avatar=avatar)
+        iris.switch_mode("iris_rpg", avatar=avatar)
         threading.Thread(
             target=rpg_game_loop, args=(iris, avatar, game_window), daemon=True
         ).start()
+
+    elif action == "start_balatro":
+        with _rpg_lock:
+            if _rpg_running and _rpg_game and not _rpg_game.is_over():
+                iris.vm.speak(
+                    "I'm already playing something. Stop it first.", avatar=avatar
+                )
+                return
+        # Start balatro
+        balatro_skill.start_balatro(iris, avatar)
 
 
 def handle_input(text, iris, avatar, game_window=None):
@@ -276,8 +296,8 @@ def main():
     time.sleep(0.5)
 
     # --- Idle loop thread ---
-    idle_thread = threading.Thread(target=iris.idle_loop, args=(avatar,), daemon=True)
-    idle_thread.start()
+    # idle_thread = threading.Thread(target=iris.idle_loop, args=(avatar,), daemon=True)
+    # idle_thread.start()
 
     # --- Blink loop thread ---
     blink_thread = threading.Thread(target=avatar.blink_loop, daemon=True)

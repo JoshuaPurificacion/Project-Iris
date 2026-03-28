@@ -10,10 +10,16 @@ from core.vision import get_screen_text
 
 import modes.exhibit as exhibit_mode
 import modes.default as default_mode
-import modes.gaming as gaming_mode
+import modes.iris_rpg as iris_rpg_mode
+import modes.balatro as balatro_mode
 from skills import omnisense_skill
 
-MODES = {"exhibit": exhibit_mode, "default": default_mode, "gaming": gaming_mode}
+MODES = {
+    "exhibit": exhibit_mode,
+    "default": default_mode,
+    "iris_rpg": iris_rpg_mode,
+    "balatro": balatro_mode,
+}
 
 LLM_MODEL = "qwen2.5:latest"
 
@@ -235,11 +241,13 @@ class Iris:
 
             if self.vm:
                 if mode_name == "default":
-                    msg = "Systems recalibrated. Ready."
-                elif mode_name == "gaming":
-                    msg = "Booting up the game. Don't distract me, I'm focusing!"
+                    msg = "Alright, I'm back. What's the move, Josh?"
+                elif mode_name == "iris_rpg":
+                    msg = "Finally! Let's get some Ws in the dungeon. Watch this!"
+                elif mode_name == "balatro":
+                    msg = "Time to gamble! Let's hit some high scores in Balatro!"
                 else:
-                    msg = "Switching to Exhibit Mode. Ready for the Arduin-o-vation presentation!"
+                    msg = "Switching to Exhibit Mode. Let's show off this hardware!"
                 self.vm.speak(msg, avatar=avatar)
 
     def idle_loop(self, avatar=None):
@@ -261,7 +269,7 @@ class Iris:
 
                     # --- DYNAMIC CONTEXTUAL NUDGE LOGIC ---
                     if self.active_mode_name == "default":
-                        log_system("Idle trigger: Snapping screen context...")
+                        from core.vision import get_screen_text
 
                         screen_text = get_screen_text()
 
@@ -269,14 +277,14 @@ class Iris:
                             if not self._screen_text_has_changed(screen_text):
                                 continue
                             nudge_prompt = (
-                                f"I am looking at your screen right now. I see this text: '{screen_text}'. "
-                                f"Make a single, casual, and witty 1-sentence comment about what I am looking at. "
-                                f"Do not say 'I see' or 'I am looking at'. Just comment on the topic directly as if we are pair programming. Absolutely NO emojis."
+                                f"I am looking at your screen right now and see this text: '{screen_text}'. "
+                                f"Act like a VTuber watching your friend play a game. Make a short, chaotic, or funny 1-sentence backseat gamer comment about what is happening on screen. "
+                                f"If it doesn't look like a game, just say something random and casual to chat about. Absolutely NO emojis."
                             )
                         elif len(self.messages) > 3:
                             nudge_prompt = (
                                 "We haven't spoken in a few minutes. Look at our recent conversation "
-                                "history. Make a single, highly relevant 1-sentence comment."
+                                "history. Make a single, highly relevant 1-sentence comment to keep the chat going. Absolutely NO emojis."
                             )
                         else:
                             nudge_prompt = random.choice(self.mode_data.IDLE_NUDGES)
@@ -374,18 +382,36 @@ class Iris:
 
         return full_response.strip(), detected_tool_calls
 
-    def chat(self, user_text, save=True, use_tools=True, avatar=None):
+    def chat(
+        self, user_text, save=True, use_tools=True, avatar=None, ephemeral_context=None
+    ):
+        """
+        Added ephemeral_context to prepend transient data (e.g., game state JSON)
+        to the prompt for this turn without persisting it in history.
+        """
         with self.lock:
+            if ephemeral_context:
+                full_prompt = f"{ephemeral_context}\n\nUser Message: {user_text}"
+            else:
+                full_prompt = user_text
+
             return self._chat_internal(
-                user_text, save=save, use_tools=use_tools, avatar=avatar
+                full_prompt,
+                save=save,
+                use_tools=use_tools,
+                avatar=avatar,
+                original_user_text=user_text if ephemeral_context else None,
             )
 
-    def _chat_internal(self, user_text, save=True, use_tools=True, avatar=None):
+    def _chat_internal(
+        self, user_text, save=True, use_tools=True, avatar=None, original_user_text=None
+    ):
         if self.vm:
             self.vm.abort_flag.clear()
         self.last_was_idle = False  # Reset idle toggle when user speaks
 
-        temp_msg = {"role": "user", "content": user_text}
+        text_to_save = original_user_text if original_user_text else user_text
+        temp_msg = {"role": "user", "content": text_to_save}
         self.messages.append(temp_msg)
 
         # Use active mode's tools; idle loop overrides with empty list via use_tools=False
@@ -569,7 +595,9 @@ class Iris:
                         if not screen_text:
                             screen_text = "[No readable text found on screen]"
                         else:
-                            screen_text = screen_text[:1000]  # Cap length to save tokens
+                            screen_text = screen_text[
+                                :1000
+                            ]  # Cap length to save tokens
                         tool_response = f"Screen contents: {screen_text}"
                     except Exception as e:
                         tool_response = f"Failed to read screen: {e}"

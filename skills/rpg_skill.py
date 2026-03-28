@@ -97,22 +97,21 @@ def format_prompt(state: dict) -> str:
             "Then, explicitly ask the chat if they want you to try again. Keep it to 1-2 sentences."
         )
 
-    recent_events = "\n".join(state.get("recent_log", ["No recent events."]))
+    recent_events = "\n".join(state.get("recent_log", [])[-3:]) or "No recent actions yet."
 
-    prompt = f"""--- CURRENT GAME STATE ---
-Location: Floor {state["floor"]} - {state["room_name"]}
-Weapon: {state["weapon_name"]} (ATK: {state["weapon_atk"]})
-Iris HP: {state["player_hp"]}/{state["player_max_hp"]}  |  Potions: {state["potions"]} (has potion: {'yes' if state.get('has_potion') else 'no'})
-Enemy: {state["enemy_name"]} (HP: {state["enemy_hp"]}/{state["enemy_max_hp"]})
+    prompt = f"""[STREAM DATA]
+Location: {state['room_name']}
+HP: {state['player_hp']}/{state['player_max_hp']} | Potions: {state['potions']}
+Enemy: {state['enemy_name']} (HP: {state['enemy_hp']}/{state['enemy_max_hp']})
 
-RECENT EVENTS LOG (Read this and react to it!):
+[LATEST ACTIONS]
 {recent_events}
 
-YOUR TURN!
-Speak in 2-3 punchy sentences: react to the events (damage? crit? loot?), mention your HP/potions, and call out your plan.
+[INSTRUCTION]
+React to the LATEST ACTIONS. If you hit a crit, celebrate! If the {state['enemy_name']} is low, talk trash.
+Speak to Joshua/Chat. Use 2-3 sentences. Do NOT say the word 'attack' or 'defend'.
 If you have no potions, do NOT choose [heal].
-Finish with exactly ONE action tag in brackets so the engine can read it.
-Valid actions: [attack], [defend], [heal], [flee]."""
+End with exactly one silent tag: [attack], [defend], [heal], or [flee]."""
 
     return prompt
 

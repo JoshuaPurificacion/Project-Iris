@@ -212,6 +212,10 @@ class AvatarWindow:
             command=lambda: self._trigger_game_action("start_micro_rpg"),
         )
         self.games_menu.add_command(
+            label="🃏 Play Balatro",
+            command=lambda: self._trigger_game_action("start_balatro"),
+        )
+        self.games_menu.add_command(
             label="🛑 Stop Current Game",
             command=lambda: self._trigger_game_action("stop_game"),
         )
