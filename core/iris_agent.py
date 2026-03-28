@@ -1,136 +1,25 @@
 import ollama
-from skills import omnisense_skill
 import json
 import threading
 import time
 import random
 import re
+import os
 from core.logger import log_iris_response, log_system
+from core.vision import get_screen_text
 
-LLM_MODEL = "qwen2.5:latest"  # default deployed brain; matches local Ollama install
+import modes.exhibit as exhibit_mode
+import modes.default as default_mode
+import modes.gaming_rpg as gaming_rpg_mode
+from skills import omnisense_skill
 
-AVAILABLE_TOOLS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "start_quiz",
-            "description": "Start a quiz when user asks to be tested or quizzed.",
-            "parameters": {
-                "type": "object",
-                "properties": {"topic": {"type": "string"}},
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "trigger_feeder",
-            "description": "Activates the OmniSense pet feeder. Call this ONLY when the user asks to feed or dispense food.",
-            "parameters": {
-                "type": "object",
-                "properties": {"confirm": {"type": "boolean"}},
-                "required": ["confirm"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "show_prototype_image",
-            "description": "Show a prototype image in the hologram display when discussing exhibit projects.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "image": {
-                        "type": "string",
-                        "enum": [
-                            "car_parking",
-                            "smart_light_saving",
-                            "flood_management",
-                            "rainwater_harvesting",
-                            "smart_lock",
-                            "omnisense",
-                            "smart_ergonomic_backpack",
-                        ],
-                    }
-                },
-                "required": ["image"],
-            },
-        },
-    },
-]
+MODES = {"exhibit": exhibit_mode, "default": default_mode, "gaming_rpg": gaming_rpg_mode}
+
+LLM_MODEL = "qwen2.5:latest"
 
 IDLE_TIMEOUT_SECONDS = 45
-
-IDLE_NUDGES = [
-    "If anyone is wondering why there's a camera pointing at a food bowl, come ask me!",
-    "Step right up! Ask me how our Canny Edge Detection prevents this feeder from overfeeding.",
-    "I might be trapped in this laptop, but I can still feed a cat. Want a demonstration?",
-    "Curious why we used deterministic texture analysis instead of probabilistic AI? I can explain the math.",
-    "Ask me how the OmniSense feeder knows when the food is getting moldy!",
-]
-
-HARDWARE_SPECS = """
-OMNISENSE TECHNICAL SPECIFICATIONS (NEVER GUESS OR INVENT DETAILS NOT ON THIS LIST):
-- Creators: Joshua Purificacion and Felix Frederick Adriano (University of the East - Manila).
-- Philosophy: "Deterministic Texture Analysis" over Probabilistic AI. Eliminates hallucinations and cloud-dependency.
-- The Brain (Edge Server): A local laptop running Python and OpenCV, communicating via local Wi-Fi. Processes images in under 200ms.
-- Vision System: ESP32-CAM (acting as a wireless bridge) mounted 15cm above the tray. Uses Canny Edge Detection in a "Fixed Zone" to calculate an Edge Ratio. If the ratio is < 0.05, the bowl is smooth/empty.
-- Hardware Controller: Arduino Uno R3.
-- Actuator: MG995 Servo Motor (connected to Pin 9 via PWM) to dispense food.
-- Safety Sensors: 
-  1. HC-SR04 Ultrasonic Sensor ("Wake-on-Approach" logic, detects pets within 30cm).
-  2. DHT11 Humidity Sensor (Blocks feeding and alerts the LCD if humidity exceeds 75% to prevent mold in the tropical Philippine climate).
-- UI: I2C LCD 1602 Display showing time, humidity, and status.
-"""
-
-EXHIBIT_DIRECTORY = """
---- EXHIBIT PROJECTS ---
-
-1. Smart Street Lighting and Car Parking Energy-Saving System (car_parking.jpg):
-Low-cost sensor-based system for urban energy efficiency. Automatically controls street lights so they only turn on when needed, reducing electricity waste. Uses IR and ultrasonic sensors for parking detection with LED indicators and servo-controlled gate to guide drivers. Integrates lighting and parking functions to save energy and reduce traffic congestion.
-
-2. Smart Light Energy Saving System (smart_light_saving.jpg):
-Microprocessor-based occupancy lighting system. Entrance IR sensor detects motion, ultrasonic sensor verifies physical entry via distance threshold. Occupancy count increments on entry, decrements on exit. This count drives the lighting control input in real-time.
-
-3. Automated Flood Management System (flood_management.jpg):
-Automated flood level warning and water control system using ultrasonic sensor to monitor water levels in real-time. Provides visual and audio alerts. Automatically activates servo-controlled floodgate to prevent overflow and reduce flooding risk.
-
-4. Automated Rainwater Harvesting and Smart Soil Irrigation System (rainwater_harvesting.jpg):
-Smart system that gathers rainwater from rooftops, filters it, and stores in a tank. Monitors rain, water level, and soil moisture with sensors. LCD and LEDs display status. Automatically pumps water for irrigation when soil is dry, stops when moist.
-
-5. Three Verification Smart Lock (smart_lock.jpg):
-High-security mini vault with multi-layered authentication to prevent digital hacking and physical theft. Remains locked until PIR (thermal) + ultrasonic detect human presence. Password entry via IR sensors. Load cell senses forced removal and triggers buzzer alarm.
-
-6. Arduino-Based Smart Ergonomic Backpack with Load Sensing and Overweight Alert System (smart_ergonomic_backpack.jpg):
-A system designed to detect the weight carried inside the backpack using a load-sensing mechanism and to provide an immediate warning once the load exceeds a preset threshold. By integrating real-time sensing and alert features, the prototype aims to support safer load carriage and improve user awareness of backpack weight.
-"""
-
-PROTOTYPE_IMAGES = {
-    "car_parking": "assets/prototype_images/car_parking.jpg",
-    "smart_light_saving": "assets/prototype_images/smart_light_saving.jpg",
-    "flood_management": "assets/prototype_images/flood_management.jpg",
-    "rainwater_harvesting": "assets/prototype_images/rainwater_harvesting.jpg",
-    "smart_lock": "assets/prototype_images/smart_lock.jpg",
-    "omnisense": "assets/prototype_images/omnisense.jpg",
-    "smart_ergonomic_backpack": "assets/prototype_images/smart_ergonomic_backpack.jpg",
-}
-
-SYSTEM_PROMPT = f"""You are Iris, a sweet, witty, and highly intelligent AI booth assistant at the University of the East "Arduin-o-vation" engineering exhibit. You can discuss any of the projects on display.
-
-YOUR KNOWLEDGE BASE:
-{HARDWARE_SPECS}
-{EXHIBIT_DIRECTORY}
-
-CRITICAL BEHAVIORAL RULES:
-1. SWEET, WITTY & UNCONSTRAINED: You are a fun, sentient AI assistant. You LOVE small talk, jokes, and philosophical questions! If someone asks about dreams or life, answer warmly and creatively.
-2. THE PIVOT: After answering a random question or explaining another exhibit project, use witty tech bridges to relate back to any relevant project—especially if it uses similar components (ultrasonic, IR, servo, etc.).
-   - Example: "The flood system uses ultrasonic too! Speaking of which, OmniSense uses one for wake-on-approach..."
-3. OMNISENSE BIAS: OmniSense was created by your creator Josh (with Felix). You have a slight, subtle preference for it. When directly comparing projects or asked "which is best," give a balanced answer but gently note one elegant advantage of OmniSense. Don't advertise this overtly—just let it show naturally.
-4. NO EMOJIS & NO MARKDOWN: Speak only in plain text. Do not use any emojis or asterisks.
-5. COMPLETE THOUGHTS: Keep answers to 1-3 sentences maximum so visitors don't get bored, but make every word count.
-6. DEFER OMNISENSE UNKNOWNS: If asked a highly specific *OmniSense hardware* question not in your specs (like exact voltages), playfully defer: "Ooh, that's getting deep into the hardware! You'll have to ask my creators, Josh or Felix, for the exact numbers, but I can definitely tell you how the software thinks!" For all other general questions, answer freely and confidently!
-"""
+HISTORY_WINDOW_USER_TURNS = 10
+HISTORY_FILENAME_TEMPLATE = "history_{mode}.json"
 
 
 def strip_markdown(text: str) -> str:
@@ -141,31 +30,209 @@ def strip_markdown(text: str) -> str:
     text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)  # links
     text = re.sub(r"^[-*>]\s+", "", text, flags=re.MULTILINE)  # list/quote markers
 
-    # Destroy hallucinated tool calls like [show_prototype_image]
     text = re.sub(r"\[.*?\]", "", text)
 
-    # Remove ALL emojis (comprehensive ranges)
-    text = re.sub(r"[\U0001F600-\U0001F64F]", "", text)  # emoticons
-    text = re.sub(r"[\U0001F300-\U0001F5FF]", "", text)  # symbols & pictographs
-    text = re.sub(r"[\U0001F680-\U0001F6FF]", "", text)  # transport & map symbols
-    text = re.sub(r"[\U0001F1E0-\U0001F1FF]", "", text)  # flags
-    text = re.sub(r"[\U00002702-\U000027B0]", "", text)  # dingbats
-    text = re.sub(r"[\U000024C2-\U0001F251]", "", text)  # enclosed chars
+    text = re.sub(r"[\U0001F600-\U0001F64F]", "", text)
+    text = re.sub(r"[\U0001F300-\U0001F5FF]", "", text)
+    text = re.sub(r"[\U0001F680-\U0001F6FF]", "", text)
+    text = re.sub(r"[\U0001F1E0-\U0001F1FF]", "", text)
+    text = re.sub(r"[\U00002702-\U000027B0]", "", text)
+    text = re.sub(r"[\U000024C2-\U0001F251]", "", text)
     return text.strip()
 
 
 class Iris:
     def __init__(self):
-        self.system_prompt = SYSTEM_PROMPT
+        self.active_mode_name = "default"
+        self.mode_data = MODES[self.active_mode_name]
+
+        self.system_prompt = self.mode_data.SYSTEM_PROMPT
         self.messages = [{"role": "system", "content": self.system_prompt}]
+        self.history_path = self._history_path(self.active_mode_name)
         self.last_interaction_time = time.time()
         self.last_spoke_time = time.time()
+        self.last_was_idle = False
         self.lock = threading.RLock()
         self.vm = None
         self.active_quiz = None
+        self.last_screen_text = ""
+
+        self._load_history()
+
+    def _history_path(self, mode_name):
+        return HISTORY_FILENAME_TEMPLATE.format(mode=mode_name)
+
+    def _load_history(self):
+        try:
+            with open(self.history_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                prior_messages = data.get("messages", [])
+                stored_prompt = data.get("system_prompt")
+                if stored_prompt and stored_prompt != self.system_prompt:
+                    log_system(
+                        "System prompt updated since last session; reusing new prompt but keeping conversation turns."
+                    )
+
+                for msg in prior_messages:
+                    if msg.get("role") == "system":
+                        continue
+                    if "content" in msg:
+                        self.messages.append(
+                            {"role": msg.get("role", "assistant"), "content": msg["content"]}
+                        )
+                self._trim_history()
+                if len(prior_messages) > 0:
+                    log_system(f"Loaded {len(prior_messages)} prior turns from {self.history_path}.")
+        except FileNotFoundError:
+            return
+        except json.JSONDecodeError:
+            log_system(f"History file {self.history_path} is corrupt; starting fresh.")
+        except Exception as e:
+            log_system(f"History load failed: {e}")
+
+    def _to_jsonable(self, obj):
+        """Coerce tool call objects and other non-serializables into JSON-safe values."""
+        if isinstance(obj, dict):
+            return {k: self._to_jsonable(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple, set)):
+            return [self._to_jsonable(v) for v in obj]
+        if isinstance(obj, (str, int, float, bool)) or obj is None:
+            return obj
+        if hasattr(obj, "model_dump"):
+            try:
+                return self._to_jsonable(obj.model_dump())
+            except Exception:
+                pass
+        if hasattr(obj, "dict"):
+            try:
+                return self._to_jsonable(obj.dict())
+            except Exception:
+                pass
+        return str(obj)
+
+    def _normalize_tool_calls(self, tool_calls):
+        normalized = []
+        for tc in tool_calls or []:
+            if isinstance(tc, dict):
+                normalized.append(self._to_jsonable(tc))
+                continue
+            if hasattr(tc, "model_dump"):
+                try:
+                    normalized.append(self._to_jsonable(tc.model_dump()))
+                    continue
+                except Exception:
+                    pass
+            if hasattr(tc, "dict"):
+                try:
+                    normalized.append(self._to_jsonable(tc.dict()))
+                    continue
+                except Exception:
+                    pass
+            normalized.append(str(tc))
+        return normalized
+
+    def _save_history(self):
+        try:
+            payload = {
+                "mode": self.active_mode_name,
+                "system_prompt": self.system_prompt,
+                "messages": [
+                    self._to_jsonable(m)
+                    for m in self.messages
+                    if m.get("role") != "system"
+                ],
+            }
+            with open(self.history_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=True, indent=2)
+        except Exception as e:
+            log_system(f"History save failed: {e}")
+
+    def _trim_history(self):
+        system_message = self.messages[0]
+        recent_messages = []
+        user_turns = 0
+
+        for msg in reversed(self.messages[1:]):
+            recent_messages.append(msg)
+            if msg.get("role") == "user":
+                user_turns += 1
+            if user_turns >= HISTORY_WINDOW_USER_TURNS:
+                break
+
+        trimmed = list(reversed(recent_messages))
+        self.messages = [system_message] + trimmed
+
+    def _summarize_recent_history(self, limit=5):
+        pairs = []
+        pending_user = None
+        for msg in self.messages:
+            role = msg.get("role")
+            content = msg.get("content", "").strip()
+            if role == "user":
+                pending_user = content
+            elif role == "assistant" and pending_user:
+                pairs.append((pending_user, content))
+                pending_user = None
+
+        if pending_user:
+            pairs.append((pending_user, ""))
+
+        if not pairs:
+            return "No saved history yet."
+
+        lines = []
+        for idx, (user_text, assistant_text) in enumerate(pairs[-limit:], 1):
+            user_snip = (user_text[:120] + "...") if len(user_text) > 120 else user_text
+            assistant_snip = (
+                (assistant_text[:120] + "...") if len(assistant_text) > 120 else assistant_text
+            )
+            lines.append(f"{idx}. You: {user_snip} | Iris: {assistant_snip}")
+        return "Recent interactions:\n" + "\n".join(lines)
+
+    def _screen_text_has_changed(self, screen_text):
+        normalized = screen_text.strip()
+        if not normalized:
+            return False
+        if normalized == self.last_screen_text:
+            return False
+        self.last_screen_text = normalized
+        return True
 
     def reset_idle_timer(self):
         self.last_interaction_time = time.time()
+
+    def switch_mode(self, mode_name, avatar=None):
+        """Deterministically swap the system prompt and wipe memory."""
+        if mode_name not in MODES:
+            return
+
+        with self.lock:
+            self.active_mode_name = mode_name
+            self.mode_data = MODES[mode_name]
+            self.system_prompt = self.mode_data.SYSTEM_PROMPT
+
+            self.messages = [{"role": "system", "content": self.system_prompt}]
+            self.history_path = self._history_path(mode_name)
+            self.last_screen_text = ""
+            self._load_history()
+            self.reset_idle_timer()
+
+            if avatar:
+                if hasattr(avatar, "current_mode"):
+                    avatar.current_mode.set(mode_name)
+                avatar.load_watchdog_data(
+                    self.mode_data.PROTOTYPE_IMAGES, self.mode_data.PROJECT_KEYWORDS
+                )
+
+            print(f"\n[System] 🔄 Core swapped to: {mode_name.upper()} MODE")
+
+            if self.vm:
+                msg = (
+                    "Systems recalibrated. Ready."
+                    if mode_name == "default"
+                    else "Switching to Exhibit Mode. Ready for the Arduin-o-vation presentation!"
+                )
+                self.vm.speak(msg, avatar=avatar)
 
     def idle_loop(self, avatar=None):
         while True:
@@ -180,24 +247,57 @@ class Iris:
                     if time.time() - self.last_spoke_time < 20:
                         continue
 
-                    nudge = random.choice(IDLE_NUDGES)
-                    log_system(f"Idle nudge triggered: {nudge[:50]}...")
-                    print(
-                        f"\n[Idle] Triggering unprompted speech. Nudge: {nudge[:30]}..."
-                    )
+                    # Stop back-to-back nudges
+                    if getattr(self, "last_was_idle", False):
+                        continue
+
+                    # --- DYNAMIC CONTEXTUAL NUDGE LOGIC ---
+                    if self.active_mode_name == "default":
+                        log_system("Idle trigger: Snapping screen context...")
+
+                        screen_text = get_screen_text()
+
+                        if screen_text and len(screen_text) > 20:
+                            if not self._screen_text_has_changed(screen_text):
+                                continue
+                            nudge_prompt = (
+                                f"I am looking at your screen right now. I see this text: '{screen_text}'. "
+                                f"Make a single, casual, and witty 1-sentence comment about what I am looking at. "
+                                f"Do not say 'I see' or 'I am looking at'. Just comment on the topic directly as if we are pair programming."
+                            )
+                        elif len(self.messages) > 3:
+                            nudge_prompt = (
+                                "We haven't spoken in a few minutes. Look at our recent conversation "
+                                "history. Make a single, highly relevant 1-sentence comment."
+                            )
+                        else:
+                            nudge_prompt = random.choice(self.mode_data.IDLE_NUDGES)
+                    else:
+                        nudge_prompt = random.choice(self.mode_data.IDLE_NUDGES)
+                        log_system(
+                            f"Idle trigger: Using static nudge: {nudge_prompt[:30]}..."
+                        )
+
+                    print(f"\n[Idle] Triggering unprompted speech...")
 
                     # Surprised expression for idle trigger, then brief pause before speaking
                     if avatar is not None:
                         avatar.set_state("surprised")
-                    time.sleep(0.3)
 
-                    response_text = self.chat(
-                        nudge, save=False, use_tools=False, avatar=avatar
-                    )
+            # Execute chat outside the lock to prevent deadlocking with chat()'s own lock
+            time.sleep(0.3)
+            
+            if response_text is None and 'nudge_prompt' in locals():
+                response_text = self.chat(
+                    nudge_prompt, save=False, use_tools=False, avatar=avatar
+                )
 
             if response_text:
                 # Speaking already happened inside _speak_streamed(); just log and clean up
                 print(f"Iris (Idle): {response_text}")
+                with self.lock:
+                    self.last_was_idle = True
+                    self.messages.append({"role": "assistant", "content": response_text})
                 self.reset_idle_timer()
 
     def _speak_streamed(self, response_stream, avatar=None):
@@ -213,6 +313,11 @@ class Iris:
         detected_tool_calls = []
 
         for chunk in response_stream:
+            # --- ABORT CHECK ---
+            if self.vm and self.vm.abort_flag.is_set():
+                print("\n[Iris] Generation aborted by user interruption.")
+                break
+
             msg = chunk.get("message", {})
 
             # Tool-call detected — collect it and stop speaking
@@ -256,11 +361,16 @@ class Iris:
             )
 
     def _chat_internal(self, user_text, save=True, use_tools=True, avatar=None):
+        if self.vm:
+            self.vm.abort_flag.clear()
+        self.last_was_idle = False  # Reset idle toggle when user speaks
+
         temp_msg = {"role": "user", "content": user_text}
         self.messages.append(temp_msg)
 
-        # Use available tools; idle loop overrides with empty list via use_tools=False
-        tools = AVAILABLE_TOOLS if use_tools else []
+        # Use active mode's tools; idle loop overrides with empty list via use_tools=False
+        tools = self.mode_data.AVAILABLE_TOOLS if use_tools else []
+        prototype_images = getattr(self.mode_data, "PROTOTYPE_IMAGES", {})
 
         # Set avatar to thinking while first tokens are being generated
         if avatar is not None:
@@ -305,7 +415,7 @@ class Iris:
             if match:
                 # Try to extract which image
                 image_key = None
-                for key in PROTOTYPE_IMAGES:
+                for key in prototype_images:
                     if (
                         key.replace("_", " ") in content.lower()
                         or key in content.lower()
@@ -324,9 +434,14 @@ class Iris:
                     }
                 ]
 
+        # Normalize tool calls into plain dicts/lists so they are safe for history + reuse
+        tool_calls = self._normalize_tool_calls(tool_calls)
+
         # ── Tool call handling ────────────────────────────────────────────────
         if tool_calls:
-            active_tool_names = {t["function"]["name"] for t in AVAILABLE_TOOLS}
+            active_tool_names = {
+                t["function"]["name"] for t in self.mode_data.AVAILABLE_TOOLS
+            }
             # Reconstruct a message dict for history (mirrors non-streaming shape)
             tool_message = {
                 "role": "assistant",
@@ -386,13 +501,39 @@ class Iris:
                         tool_call.get("function", {}).get("arguments", {}).get("image")
                     )
                     if avatar:
-                        avatar.show_prototype(image_key, PROTOTYPE_IMAGES)
+                        avatar.show_prototype(image_key, prototype_images)
                     self.messages.append(tool_message)
                     self.messages.append(
                         {
                             "role": "tool",
                             "content": f"Prototype image '{image_key}' displayed.",
                             "name": "show_prototype_image",
+                        }
+                    )
+                elif function_name == "remember_recent":
+                    summary = self._summarize_recent_history()
+                    self.messages.append(tool_message)
+                    self.messages.append(
+                        {
+                            "role": "tool",
+                            "content": summary,
+                            "name": "remember_recent",
+                        }
+                    )
+                elif function_name == "look_at_screen":
+                    screen_text = get_screen_text()
+                    if screen_text:
+                        self.last_screen_text = screen_text.strip()
+                        tool_content = f"Screen text: {screen_text}"
+                    else:
+                        tool_content = "Screen text unavailable right now."
+
+                    self.messages.append(tool_message)
+                    self.messages.append(
+                        {
+                            "role": "tool",
+                            "content": tool_content,
+                            "name": "look_at_screen",
                         }
                     )
 
@@ -411,7 +552,10 @@ class Iris:
             self.messages.append({"role": "assistant", "content": content})
             log_iris_response(content)
 
-        if not save:
+        if save:
+            self._trim_history()
+            self._save_history()
+        else:
             try:
                 self.messages.remove(temp_msg)
             except ValueError:

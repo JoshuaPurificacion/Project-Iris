@@ -21,6 +21,7 @@ Project Iris is a fully offline, locally-run AI VTuber built for a university en
 - 😴 **Idle** — Speaks unprompted during silence with casual observations and humor
 - 🐾 **Trigger Hardware** — Controls OmniSense ESP32-CAM pet feeder via HTTP
 - 📝 **Quiz** — Tests visitors on Computer Engineering topics with score tracking
+- 🎮 **Game** — Autonomous Micro RPG mode where Iris plays a custom dungeon crawler overlay
 - 🎭 **Express** — Animated PNG avatar with state-based expressions and animations
 
 ---
@@ -148,6 +149,8 @@ start_booth.bat
 | Feed the cat | Say or type "feed the cat" or "demo feed" |
 | Start a quiz | Say or type "quiz me" |
 | Stop a quiz | Say or type "stop quiz" |
+| Start RPG game | Say or type "start game" or "play rpg" |
+| Stop RPG game | Say or type "stop game" |
 | Move avatar | Hold click 2 seconds then drag |
 | Bob avatar | Single click |
 
@@ -177,9 +180,18 @@ Project-Iris/
 │   ├── voice.py           # STT + TTS + VAD + speech queue
 │   ├── avatar.py          # tkinter display + animations
 │   └── logger.py          # Conversation logging
+├── games/
+│   └── micro_rpg.py       # Turn-based dungeon crawler engine
+├── modes/
+│   ├── default.py         # Standard companion mode
+│   ├── exhibit.py         # Arduin-o-vation presentation mode
+│   └── gaming_rpg.py      # Invested gamer personality mode
 ├── skills/
 │   ├── omnisense_skill.py # ESP32-CAM pet feeder trigger
-│   └── quiz_skill.py      # CE quiz with score tracking
+│   ├── quiz_skill.py      # CE quiz with score tracking
+│   └── rpg_skill.py       # Prompt injector and action parser
+├── ui/
+│   └── game_window.py     # RPG UI overlay (tkinter)
 ├── assets/
 │   └── avatar/            # Iris PNG expressions
 ├── models/

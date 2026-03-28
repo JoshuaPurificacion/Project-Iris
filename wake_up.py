@@ -1,11 +1,24 @@
 from core.voice import VoiceManager
 from core.iris_agent import Iris
 from core.avatar import AvatarWindow
-from core.logger import log_system
+from core.logger import log_system, log_text_input
 from skills import omnisense_skill
+from skills import rpg_skill
+from games.micro_rpg import MicroRPG
+from ui.game_window import GameWindow
 import sys
 import threading
 import time
+
+START_GAME_TRIGGERS = [
+    "start game", "play game", "start rpg", "play rpg",
+    "let's play", "lets play", "start dungeon", "play dungeon",
+    "start adventure", "play adventure",
+]
+STOP_GAME_TRIGGERS = [
+    "stop game", "end game", "quit game", "exit game",
+    "stop rpg", "quit rpg", "stop dungeon", "stop adventure",
+]
 
 MANUAL_FEED_TRIGGERS = [
     "manual feed",
@@ -19,15 +32,102 @@ MANUAL_FEED_TRIGGERS = [
     "trigger feeder",
 ]
 
+# ── RPG game state (shared between handle_input and rpg_game_loop) ──────────
+_rpg_game      = None
+_rpg_running   = False
+_rpg_lock      = threading.Lock()
 
-def handle_input(text, iris, avatar):
+
+def rpg_game_loop(iris, avatar, game_window):
+    """Autonomous game loop — runs on a daemon thread."""
+    global _rpg_game, _rpg_running
+
+    log_system("[RPG] Game loop started.")
+    game_window.show()
+
+    with _rpg_lock:
+        _rpg_game = MicroRPG()
+
+    while True:
+        with _rpg_lock:
+            if not _rpg_running:
+                break
+            game = _rpg_game
+            if game is None:
+                break
+
+        state = game.get_state()
+        game_window.refresh(state)
+
+        if game.is_over():
+            # Final reaction from Iris
+            prompt = rpg_skill.format_prompt(state)
+            iris.chat(prompt, save=False, use_tools=False, avatar=avatar)
+            break
+
+        # Format prompt and get Iris's decision
+        prompt = rpg_skill.format_prompt(state)
+        game_window.set_status("Iris is thinking...")
+        response = iris.chat(prompt, save=True, use_tools=False, avatar=avatar)
+
+        # Parse action from Iris's response
+        action = rpg_skill.parse_action(response or "")
+        log_system(f"[RPG] Iris chose: {action}")
+        game_window.set_status(f"Iris chose: {action}")
+
+        # Execute action and refresh UI
+        result = game.take_action(action)
+        game_window.refresh(result["state"])
+
+        # Brief pause between turns so it feels natural
+        time.sleep(3)
+
+    log_system("[RPG] Game loop ended.")
+    game_window.set_status("Game over. Say 'start game' to play again.")
+    iris.switch_mode("default", avatar=avatar)
+
+    with _rpg_lock:
+        _rpg_running = False
+        _rpg_game = None
+
+
+def handle_input(text, iris, avatar, game_window=None):
+    global _rpg_running, _rpg_game
+
     iris.reset_idle_timer()
     if iris.vm:
         try:
-            iris.vm.flush()
+            iris.vm.interrupt_playback(avatar=avatar, reason="new_input")
         except Exception as e:
             log_system(f"Flush failed: {e}")
     text_lower = text.lower()
+
+    # ── Stop game ─────────────────────────────────────────────────────────────
+    if any(phrase in text_lower for phrase in STOP_GAME_TRIGGERS):
+        with _rpg_lock:
+            if _rpg_running:
+                _rpg_running = False
+                _rpg_game = None
+        iris.switch_mode("default", avatar=avatar)
+        if game_window:
+            game_window.hide()
+        iris.vm.speak("Closing the dungeon. Back to normal mode.", avatar=avatar)
+        return
+
+    # ── Start game ────────────────────────────────────────────────────────────
+    if any(phrase in text_lower for phrase in START_GAME_TRIGGERS):
+        with _rpg_lock:
+            if _rpg_running:
+                iris.vm.speak("A game is already running. Say stop game first.", avatar=avatar)
+                return
+            _rpg_running = True
+        iris.switch_mode("gaming_rpg", avatar=avatar)
+        threading.Thread(
+            target=rpg_game_loop,
+            args=(iris, avatar, game_window),
+            daemon=True
+        ).start()
+        return
 
     # Check stop quiz first
     if any(phrase in text.lower() for phrase in ["stop quiz", "end quiz", "quit quiz"]):
@@ -97,24 +197,17 @@ def handle_input(text, iris, avatar):
     iris.chat(text, avatar=avatar)
 
 
-def voice_loop(vm, iris, avatar):
+def voice_loop(vm, iris, avatar, game_window):
     """Voice capture + Iris response loop — runs on a daemon thread."""
     print("\n--- Project Iris Wake-up Loop ---")
     print("Press Ctrl+C to terminate.")
 
     try:
         while True:
-            # Record from microphone and transcribe
             text = vm.listen(avatar)
-
-            # Skip silently if nothing was detected (silence gate)
             if not text:
                 continue
-
-            # Print the transcription
-            print(f"User: {text}")
-
-            handle_input(text, iris, avatar)
+            handle_input(text, iris, avatar, game_window)
 
     except KeyboardInterrupt:
         print("\nExiting voice loop.")
@@ -127,6 +220,9 @@ def main():
     # --- Avatar window (must run on main thread) ---
     avatar = AvatarWindow()
 
+    # --- Game window (hidden until game starts) ---
+    game_window = GameWindow(avatar.window)
+
     # --- Voice and agent setup ---
     print("Loading local Whisper model...")
     vm = VoiceManager()
@@ -135,12 +231,15 @@ def main():
 
     # --- Text input callback ---
     def on_text_submitted(text):
-        print(f"[Text Input] User: {text}")
+        log_text_input(text)
         threading.Thread(
-            target=handle_input, args=(text, iris, avatar), daemon=True
+            target=handle_input, args=(text, iris, avatar, game_window), daemon=True
         ).start()
 
     avatar.on_text_input = on_text_submitted
+
+    # --- Mode switch callback ---
+    avatar.on_mode_switch = lambda mode: iris.switch_mode(mode, avatar=avatar)
 
     # --- Pre-warm LLM in background to avoid blocking ---
     print("Pre-warming LLM into VRAM...")
@@ -164,7 +263,7 @@ def main():
 
     # --- Voice loop thread ---
     voice_thread = threading.Thread(
-        target=voice_loop, args=(vm, iris, avatar), daemon=True
+        target=voice_loop, args=(vm, iris, avatar, game_window), daemon=True
     )
     voice_thread.start()
 
