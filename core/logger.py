@@ -38,6 +38,10 @@ def log_voice_input(text):
     logger.info(f"🎤 VOICE: {text}")
 
 
+def log_text_input(text):
+    logger.info(f"⌨️  TEXT:  {text}")
+
+
 def log_iris_response(text):
     logger.info(f"🤖 IRIS:  {text}")
 

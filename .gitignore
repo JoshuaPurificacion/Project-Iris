@@ -6,6 +6,7 @@ models/
 
 # Conversation history (personal data)
 history.json
+history_*.json
 
 # Python cache
 __pycache__/

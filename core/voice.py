@@ -9,11 +9,16 @@ import os
 import threading
 import queue
 import re
+import json
+from pathlib import Path
 from core.logger import log_voice_input, log_caption, log_system
 
 AEC_MULTIPLIER = float(os.getenv("AEC_MULTIPLIER", "2.0"))
 
 VOICE_PITCH_STEPS = 5
+KOKORO_MODEL_PATH = Path("models/tts/kokoro-v0_19.onnx")
+KOKORO_JSON_PATH = Path("models/tts/voices.json")
+KOKORO_NPZ_PATH = Path("models/tts/voices.npz")
 
 
 def _get_best_providers():
@@ -35,6 +40,11 @@ class VoiceManager:
         self.is_speaking = threading.Event()
         self.is_interruptible = threading.Event()
         self.speech_queue = queue.Queue()
+        self.out_stream = None
+        self.abort_flag = threading.Event()
+        self.kokoro_error = None
+
+        voices_path = self._ensure_kokoro_voices_npz()
 
         # Initialize the whisper model for local inference.
         # This will load the pre-downloaded 'base' model without relying on cloud APIs.
@@ -43,11 +53,12 @@ class VoiceManager:
         # Initialize Kokoro TTS model
         try:
             self.kokoro = Kokoro(
-                "models/tts/kokoro-v0_19.onnx",
-                "models/tts/voices.bin",
+                str(KOKORO_MODEL_PATH),
+                str(voices_path),
             )
         except Exception as e:
             print(f"[VoiceManager] Failed to load Kokoro: {e}")
+            self.kokoro_error = str(e)
             self.kokoro = None
 
         # Start the background worker that processes the speech queue
@@ -78,21 +89,59 @@ class VoiceManager:
         """Stop all audio and clear pending speech queue."""
         with self.speech_queue.mutex:
             self.speech_queue.queue.clear()
-        try:
-            sd.stop()
-        except Exception:
-            pass
+        # --- SAFE INTERRUPTION ---
+        if hasattr(self, "out_stream") and self.out_stream is not None:
+            try:
+                self.out_stream.abort()
+            except Exception:
+                pass
+        self.abort_flag.set()
         self.is_speaking.clear()
         self.is_interruptible.clear()
         log_system("🔊 Audio and queue flushed.")
 
+    def interrupt_playback(self, avatar=None, reason="user_interrupt"):
+        """Unified interrupt: stop audio, clear queue, and signal abort to generation."""
+        with self.speech_queue.mutex:
+            self.speech_queue.queue.clear()
+
+        if hasattr(self, "out_stream") and self.out_stream is not None:
+            try:
+                self.out_stream.abort()
+            except Exception:
+                pass
+
+        self.abort_flag.set()
+        self.is_speaking.clear()
+        self.is_interruptible.clear()
+
+        if avatar is not None:
+            avatar.set_state("surprised")
+            try:
+                avatar.show_caption("Pausing. I'm listening.")
+            except Exception:
+                pass
+
+        log_system(f"🔇 Playback interrupted ({reason}).")
+
     def _execute_tts(self, text, avatar=None):
         """Blocking TTS execution with sequential state cleanup."""
+        if not text.strip():
+            return
         log_caption(text)
         if avatar:
             avatar.show_caption(text)
 
+        # Claim speaking state immediately so idle loop knows generation is in-flight
+        self.is_speaking.set()
+        self.is_interruptible.set()
+
         try:
+            if self.kokoro is None:
+                raise RuntimeError(
+                    f"Kokoro unavailable: {self.kokoro_error or 'not loaded'}"
+                )
+
             log_system("TTS: Using Kokoro")
             # Prepare Audio
             audio, sr = self.kokoro.create(
@@ -106,16 +155,33 @@ class VoiceManager:
             silence_pad = np.zeros(int(44100 * 0.3), dtype="float32")
             audio = np.concatenate([audio, silence_pad])
 
+            # User may have interrupted during generation
+            if self.abort_flag.is_set():
+                self.is_speaking.clear()
+                self.is_interruptible.clear()
+                return
+
             # Update State & Play
             if avatar:
                 avatar.set_state("speaking")
 
-            self.is_speaking.set()
-            self.is_interruptible.set()
-            sd.play(audio, samplerate=44100)
+            # --- ISOLATED PLAYBACK STREAM ---
+            audio_data = audio
+            if audio_data.ndim == 1:
+                audio_data = audio_data.reshape(-1, 1)
 
-            # Deterministic Wait
-            sd.wait()
+            try:
+                self.out_stream = sd.OutputStream(
+                    samplerate=44100, channels=1, dtype="float32"
+                )
+                self.out_stream.start()
+                self.out_stream.write(audio_data)
+                self.out_stream.stop()
+                self.out_stream.close()
+            except sd.PortAudioError:
+                pass  # Safely catches the abort() command if interrupted!
+            finally:
+                self.out_stream = None
 
             # Sequential Cleanup (Only runs AFTER audio finishes)
             self.is_speaking.clear()
@@ -129,6 +195,9 @@ class VoiceManager:
 
         except Exception as e:
             log_system(f"TTS: Kokoro failed ({e}), using pyttsx3 fallback")
+            log_system(
+                "[TTS WARNING] Walkie-Talkie mode active: pyttsx3 voice interruptions disabled."
+            )
             try:
                 if avatar:
                     avatar.set_state("speaking")
@@ -191,23 +260,10 @@ class VoiceManager:
 
                 # --- Selective Interruption ---
                 if self.is_speaking.is_set():
-                    if self.is_interruptible.is_set() and volume > (
-                        self.SPEAKING_THRESHOLD * AEC_MULTIPLIER
-                    ):
-                        print("[VoiceManager] NUDGE INTERRUPTED! Stopping TTS...")
-                        sd.stop()
-
-                        # --- THE FLUSH ---
-                        with self.speech_queue.mutex:
-                            self.speech_queue.queue.clear()
-                        log_system("Flushed: Queue cleared on interruption.")
-
-                        self.is_speaking.clear()
-                        self.is_interruptible.clear()
-
-                        if avatar is not None:
-                            avatar.set_state("surprised")
-                            avatar.show_caption("Oh!")
+                    # Allow soft preemption while Iris is speaking
+                    if volume > (self.SPEAKING_THRESHOLD * AEC_MULTIPLIER * 0.7):
+                        print("[VoiceManager] Interrupting TTS — user started talking.")
+                        self.interrupt_playback(avatar=avatar, reason="voice_interrupt")
 
                         speaking_started = True
                         frames = [frame.copy()]
@@ -254,3 +310,22 @@ class VoiceManager:
             avatar.set_state("idle")
 
         return result
+
+    def _ensure_kokoro_voices_npz(self) -> Path:
+        """Ensure Kokoro voices are in NPZ format expected by kokoro-onnx."""
+        if KOKORO_NPZ_PATH.exists():
+            return KOKORO_NPZ_PATH
+
+        if not KOKORO_JSON_PATH.exists():
+            self.kokoro_error = "voices.json missing"
+            return KOKORO_JSON_PATH
+
+        try:
+            data = json.loads(KOKORO_JSON_PATH.read_text(encoding="utf-8"))
+            arrays = {k: np.array(v, dtype=np.float32) for k, v in data.items()}
+            np.savez_compressed(KOKORO_NPZ_PATH, **arrays)
+            log_system("[Kokoro] Converted voices.json to voices.npz")
+            return KOKORO_NPZ_PATH
+        except Exception as e:
+            self.kokoro_error = f"voices conversion failed: {e}"
+            return KOKORO_JSON_PATH

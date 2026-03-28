@@ -18,6 +18,7 @@ Project Iris is a fully offline, locally-run AI VTuber built for a university en
 - 🧠 **Think** — Qwen2.5 7B via Ollama, streaming sentence-by-sentence responses
 - 💾 **Remember** — Persistent conversation history via sliding window memory
 - 💬 **Chat** — Both voice and text input supported simultaneously
+- 🖥️ **Read Screen** — On-demand OCR snapshot (3s grab + Tesseract) for screen context
 - 😴 **Idle** — Speaks unprompted during silence with casual observations and humor
 - 🐾 **Trigger Hardware** — Controls OmniSense ESP32-CAM pet feeder via HTTP
 - 📝 **Quiz** — Tests visitors on Computer Engineering topics with score tracking
@@ -123,19 +124,22 @@ python -c "from huggingface_hub import hf_hub_download; hf_hub_download(repo_id=
 Download `voices.bin` from: `https://github.com/thewh1teagle/kokoro-onnx/releases`  
 Place in `models/tts/voices.bin`
 
-**4. Set environment variable (for GPU)**
+**4. Install Tesseract-OCR (Windows OCR dependency)**
+
+Install the Windows Tesseract-OCR build (UB Mannheim recommended):
+
+- Download the latest `.exe` from https://github.com/UB-Mannheim/tesseract/wiki
+- Run the installer (default path: `C:\\Program Files\\Tesseract-OCR`)
+- Ensure `C:\\Program Files\\Tesseract-OCR` is on your `PATH` so `pytesseract` can find `tesseract.exe`
+
+**5. Set environment variable (for GPU)**
 ```bash
 setx CUDA_VISIBLE_DEVICES "0"
 ```
 
-**5. Run Iris**
+**6. Run Iris**
 ```bash
 .venv\Scripts\python.exe wake_up.py
-```
-
-Or use the launcher script:
-```bash
-start_booth.bat
 ```
 
 ---
@@ -146,6 +150,7 @@ start_booth.bat
 |---|---|
 | Talk to Iris | Speak into microphone — VAD detects speech automatically |
 | Type to Iris | Use the text input box on the avatar window |
+| Read the screen | Say or type "look at this" / "read the screen" — Iris takes a 3s screenshot, OCRs it, and saves the grab into the captures folder |
 | Feed the cat | Say or type "feed the cat" or "demo feed" |
 | Start a quiz | Say or type "quiz me" |
 | Stop a quiz | Say or type "stop quiz" |
@@ -179,7 +184,8 @@ Project-Iris/
 │   ├── iris_agent.py      # LLM brain + tool calling + idle loop
 │   ├── voice.py           # STT + TTS + VAD + speech queue
 │   ├── avatar.py          # tkinter display + animations
-│   └── logger.py          # Conversation logging
+│   ├── logger.py          # Conversation logging
+│   └── vision.py          # Screen capture + OCR helper
 ├── games/
 │   └── micro_rpg.py       # Turn-based dungeon crawler engine
 ├── modes/
@@ -198,7 +204,6 @@ Project-Iris/
 │   └── tts/               # Kokoro model files (not in repo)
 ├── logs/                  # Auto-generated conversation logs
 ├── wake_up.py             # Main entry point
-├── start_booth.bat        # Windows launcher script
 ├── requirements.txt
 ├── ISSUES_LOG.md
 └── README.md
@@ -230,7 +235,7 @@ Direct Python integration — avatar state changes are function calls, not audio
 - [ ] Fine-tuning on exhibit conversation data via Unsloth + LoRA
 - [ ] Filipino culture RAG (yt-dlp + deep-translator pipeline)
 - [ ] Twitch chat integration
-- [ ] Vision system — screen reading via Moondream2
+- [ ] Vision upgrade — move from fast OCR (Tesseract) to richer multimodal context (e.g., Moondream2)
 - [ ] Pokemon FireRed autonomous player (separate repo: Project-Iris-Pokemon)
 
 ---

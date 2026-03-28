@@ -8,7 +8,7 @@ Bridge between MicroRPG and Iris.
 
 import re
 
-VALID_ACTIONS = ["attack", "flee", "use item"]
+VALID_ACTIONS = ["attack", "defend", "heal", "flee"]
 
 # Keywords that map to each action
 ACTION_KEYWORDS = {
@@ -31,6 +31,32 @@ ACTION_KEYWORDS = {
         "take it down",
         "take them down",
     ],
+    "defend": [
+        "defend",
+        "block",
+        "guard",
+        "shield",
+        "brace",
+        "parry",
+        "turtle",
+        "hold",
+        "protect",
+    ],
+    "heal": [
+        "heal",
+        "potion",
+        "use item",
+        "use potion",
+        "drink",
+        "recover",
+        "restore",
+        "chug",
+        "take potion",
+        "use my potion",
+        "use the potion",
+        "recover hp",
+        "bandage",
+    ],
     "flee": [
         "flee",
         "run",
@@ -44,90 +70,50 @@ ACTION_KEYWORDS = {
         "avoid",
         "hide",
     ],
-    "use item": [
-        "use item",
-        "potion",
-        "heal",
-        "drink",
-        "use potion",
-        "use it",
-        "recover",
-        "restore",
-        "chug",
-        "take potion",
-        "use my potion",
-        "use the potion",
-    ],
 }
 
 
 def format_prompt(state: dict) -> str:
     """
     Build the context string injected before Iris generates her turn decision.
-    Keeps it short — she only needs the essentials to make a smart decision.
+    Forces Iris to read the recent events log and act like a VTuber streamer.
     """
-    p_hp = state["player_hp"]
-    p_max = state["player_max_hp"]
-    hp_pct = int((p_hp / p_max) * 100) if p_max > 0 else 0
-
-    e_name = state.get("enemy_name", "enemy")
-    e_hp = state.get("enemy_hp", 0)
-    e_max = state.get("enemy_max_hp", 1)
-    e_pct = int((e_hp / e_max) * 100) if e_max > 0 else 0
-
-    wpn = state["weapon_name"]
-    wpn_atk = state["weapon_atk"]
-    has_pot = state["has_potion"]
-    potions = state["potions"]
-    gold = state["player_gold"]
-    floor = state["floor"]
-    room = state["room_name"]
-    status = state["status"]
-
     # Game-over states
+    status = state.get("status", "active")
     if status == "victory":
         return (
             "You just defeated the final boss and won the dungeon! "
             "React with pure excitement — you conquered the Dragon's Lair. "
-            "Then, explicitly ask the user if they want to play again or watch you do another run. Keep it to 1-2 sentences."
+            "Then, explicitly ask the chat if they want to see another run. Keep it to 1-2 sentences."
         )
     if status == "defeat":
         return (
             "You just died in the dungeon. React with genuine disappointment — "
-            "Iris fell in battle. Then, explicitly ask the user if they want you to try again. Keep it to 1-2 sentences."
+            "you fell in battle. Then, explicitly ask the chat if they want you to try again. Keep it to 1-2 sentences."
         )
     if status == "escaped":
         return (
             "You just fled the dungeon. React with a mix of relief and mild shame. "
-            "Then, explicitly ask the user if they want you to try again. Keep it to 1-2 sentences."
+            "Then, explicitly ask the chat if they want you to try again. Keep it to 1-2 sentences."
         )
 
-    # Recent events for context
-    recent = state.get("recent_log", [])
-    recent_str = " | ".join(recent[-3:]) if recent else "none"
+    recent_events = "\n".join(state.get("recent_log", ["No recent events."]))
 
-    # Low HP warning
-    low_hp_note = ""
-    if hp_pct <= 25:
-        low_hp_note = (
-            " WARNING: critically low HP — consider using a potion if available."
-        )
-    elif hp_pct <= 50:
-        low_hp_note = " HP is below half — be cautious."
+    prompt = f"""--- CURRENT GAME STATE ---
+Location: Floor {state["floor"]} - {state["room_name"]}
+Weapon: {state["weapon_name"]} (ATK: {state["weapon_atk"]})
+Iris HP: {state["player_hp"]}/{state["player_max_hp"]}  |  Potions: {state["potions"]} (has potion: {'yes' if state.get('has_potion') else 'no'})
+Enemy: {state["enemy_name"]} (HP: {state["enemy_hp"]}/{state["enemy_max_hp"]})
 
-    potion_note = f"You have potions: {potions}." if has_pot else "No potions left."
+RECENT EVENTS LOG (Read this and react to it!):
+{recent_events}
 
-    prompt = (
-        f"[GAME STATE — Floor {floor}: {room}] "
-        f"Your HP: {p_hp}/{p_max} ({hp_pct}%).{low_hp_note} "
-        f"Weapon: {wpn} (ATK {wpn_atk}). "
-        f"{potion_note} "
-        f"Gold: {gold}. "
-        f"Enemy: {e_name} — HP {e_hp}/{e_max} ({e_pct}%). "
-        f"Recent events: {recent_str}. "
-        f"Choose your action: [attack], [flee], or [use item]. "
-        f"Respond in 1-2 sentences in Iris's voice, then clearly state your choice in brackets."
-    )
+YOUR TURN!
+Speak in 2-3 punchy sentences: react to the events (damage? crit? loot?), mention your HP/potions, and call out your plan.
+If you have no potions, do NOT choose [heal].
+Finish with exactly ONE action tag in brackets so the engine can read it.
+Valid actions: [attack], [defend], [heal], [flee]."""
+
     return prompt
 
 
@@ -137,12 +123,19 @@ def parse_action(text: str) -> str:
     Returns "attack" | "flee" | "use item".
     Falls back to "attack" if nothing matches.
     """
-    text_lower = text.lower()
+    text_lower = text.lower().strip()
+
+    # Map legacy alias
+    text_lower = text_lower.replace("use item", "heal")
 
     # Match bracketed exact commands first
     for action in VALID_ACTIONS:
         if f"[{action}]" in text_lower:
             return action
+
+    # Legacy bracket alias
+    if "[use item]" in text_lower:
+        return "heal"
 
     # Direct match (highest confidence fallback)
     for action in VALID_ACTIONS:
@@ -160,5 +153,9 @@ def parse_action(text: str) -> str:
     if scores[best] > 0:
         return best
 
-    # Default fallback
+    # Default fallback — keep visibility for debugging
+    try:
+        print(f"[rpg_skill] Fallback to attack (no keyword hit). Text: {text}")
+    except Exception:
+        pass
     return "attack"

@@ -58,8 +58,11 @@ from core.iris_agent import Iris
 
 def test():
     iris = Iris()
-    iris.vm = MagicMock()
-    iris.vm.speak = lambda text, **kwargs: print(f"[Iris Voice]: {text}\n")
+    iris.switch_mode("exhibit")
+    vm_mock = MagicMock()
+    vm_mock.abort_flag.is_set.return_value = False
+    vm_mock.speak = lambda text, **kwargs: print(f"[Iris Voice]: {text}\n")
+    iris.vm = vm_mock
 
     print("[You]: quiz me")
     response = iris.chat("quiz me", save=True, use_tools=True)

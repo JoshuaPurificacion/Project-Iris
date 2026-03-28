@@ -195,14 +195,18 @@ class MicroRPG:
         self.enemy["hp"] = max(0, self.enemy["hp"] - dmg)
         return events, dmg
 
-    def _resolve_enemy_attack(self):
+    def _resolve_enemy_attack(self, dmg_multiplier=1.0):
         events = []
         if random.random() < MISS_CHANCE:
             events.append(f"{self.enemy['name']} attacks — but misses!")
             return events, 0
 
         dmg = max(1, self.enemy["atk"] + random.randint(0, 1) - self.player["def"])
-        events.append(f"{self.enemy['name']} retaliates for {dmg} damage.")
+        dmg = max(0, int(dmg * dmg_multiplier))
+        if dmg == 0:
+            events.append(f"{self.enemy['name']} strikes, but the blow is fully blocked!")
+        else:
+            events.append(f"{self.enemy['name']} retaliates for {dmg} damage.")
         self.player["hp"] = max(0, self.player["hp"] - dmg)
         return events, dmg
 
@@ -315,6 +319,15 @@ class MicroRPG:
                     self.status = "defeat"
                     events.append("Iris has fallen... GAME OVER.")
 
+        # ── DEFEND ─────────────────────────────────────────
+        elif action == "defend":
+            events.append("Iris raises her guard, bracing for the next hit.")
+            enemy_events, _ = self._resolve_enemy_attack(dmg_multiplier=0.5)
+            events.extend(enemy_events)
+            if self.player["hp"] <= 0:
+                self.status = "defeat"
+                events.append("Iris has fallen... GAME OVER.")
+
         # ── FLEE ────────────────────────────────────────────
         elif action == "flee":
             flee_chance = 0.5
@@ -329,8 +342,8 @@ class MicroRPG:
                     self.status = "defeat"
                     events.append("Iris has fallen... GAME OVER.")
 
-        # ── USE ITEM ────────────────────────────────────────
-        elif action == "use item":
+        # ── HEAL / USE ITEM ─────────────────────────────────
+        elif action in ("heal", "use item"):
             potion_name = next(
                 (n for n, c in self.player["potions"].items() if c > 0), None
             )

@@ -3,7 +3,13 @@ import threading
 from core.iris_agent import Iris
 
 class MockVM:
-    def speak(self, text):
+    def __init__(self):
+        self.is_speaking = threading.Event()
+        self.abort_flag = threading.Event()
+        import queue
+        self.speech_queue = queue.Queue()
+
+    def speak(self, text, avatar=None):
         print(f"[Mock TTS] Speaking: {text}")
 
 def test():

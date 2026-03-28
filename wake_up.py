@@ -69,27 +69,36 @@ def rpg_game_loop(iris, avatar, game_window):
         game_window.set_status("Iris is thinking...")
         response = iris.chat(prompt, save=True, use_tools=False, avatar=avatar)
 
+        if response:
+            log_system(f"[RPG] Raw LLM response: {response}")
+
         # Parse action from Iris's response
         action = rpg_skill.parse_action(response or "")
         log_system(f"[RPG] Iris chose: {action}")
         game_window.set_status(f"Iris chose: {action}")
 
-        # Execute action and refresh UI
-        result = game.take_action(action)
-        game_window.refresh(result["state"])
-
-        # Sync the Game Loop with TTS
-        # Wait until she actually finishes speaking before generating the next turn
+        # Let Iris finish speaking before applying the move to keep UI and audio in sync
+        game_window.set_status("Waiting for Iris to move...")
         while (
             not iris.vm.speech_queue.empty() or iris.vm.is_speaking.is_set()
         ) and _rpg_running:
             time.sleep(0.5)
 
-        # Brief natural pause between turns
+        if not _rpg_running:
+            log_system("[RPG] Stop requested before executing action; exiting loop.")
+            break
+
+        game_window.set_status(f"Iris executed: {action}")
+        result = game.take_action(action)
+        game_window.refresh(result["state"])
+
+        # Brief natural pause between turns after the action applies
         if _rpg_running:
-            time.sleep(1)
+            time.sleep(1.5)
 
     # Note: Do not switch mode or close window here. Let the user decide via UI.
+    with _rpg_lock:
+        _rpg_running = False
     log_system("[RPG] Game thread exiting loop.")
 
 
@@ -101,10 +110,9 @@ def handle_game_action(action, iris, avatar, game_window):
             if _rpg_running:
                 _rpg_running = False
                 _rpg_game = None
-        iris.switch_mode("default", avatar=avatar)
         if game_window:
             game_window.hide()
-        iris.vm.speak("Closing the game. Back to normal mode.", avatar=avatar)
+        iris.switch_mode("default", avatar=avatar)
 
     elif action == "start_micro_rpg":
         with _rpg_lock:

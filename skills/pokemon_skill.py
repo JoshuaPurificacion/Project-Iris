@@ -21,40 +21,46 @@ from typing import Optional
 
 # ── Paths — adjust if your layout differs ─────────────────────────────────
 _PROJECT_POKEMON = r"C:\Users\Josh\Documents\Project-Iris-Pokemon"
-_LAUNCH_BAT      = os.path.join(_PROJECT_POKEMON, "launch_bizhawk.bat")
-_RUN_EMULATOR    = os.path.join(_PROJECT_POKEMON, "run_emulator.py")
-_PYTHON          = r"C:\Users\Josh\Documents\Project-Iris\.venv\Scripts\python.exe"
+_LAUNCH_BAT = os.path.join(_PROJECT_POKEMON, "launch_bizhawk.bat")
+_RUN_EMULATOR = os.path.join(_PROJECT_POKEMON, "run_emulator.py")
+_PYTHON = r"C:\Users\Josh\Documents\Project-Iris\.venv\Scripts\python.exe"
 
 
 # ── Shared state ──────────────────────────────────────────────────────────
 
+
 class _PokemonState:
     def __init__(self):
-        self.running       = False
-        self.map_name      = ""
-        self.player_pos    = (0, 0)
-        self.current_goal  = None
-        self.frames_run    = 0
-        self._agent        = None
+        self.running = False
+        self.map_name = ""
+        self.player_pos = (0, 0)
+        self.current_goal = None
+        self.frames_run = 0
+        self._agent = None
         self._thread: Optional[threading.Thread] = None
-        self._stop_event   = threading.Event()
+        self._stop_event = threading.Event()
+
 
 _state = _PokemonState()
 
 
 # ── Agent thread ──────────────────────────────────────────────────────────
 
+
 def _agent_loop(goal_xy: Optional[tuple]):
     """Runs the emulator server + agent loop in a background thread."""
     import sys
+
     sys.path.insert(0, _PROJECT_POKEMON)
 
-    from core.emulator import create_emulator, reset
-    from core.agent import Agent
-    from config import DECOMP_PATH
+    iris_core = sys.modules.pop("core", None)
 
     try:
-        emu   = create_emulator()   # blocks until BizHawk connects
+        from core.emulator import create_emulator, reset
+        from core.agent import Agent
+        from config import DECOMP_PATH
+
+        emu = create_emulator()
         reset(emu)
 
         agent = Agent(emu, DECOMP_PATH)
@@ -65,18 +71,24 @@ def _agent_loop(goal_xy: Optional[tuple]):
 
         while not _state._stop_event.is_set():
             agent.step()
-            _state.frames_run  += 1
-            _state.map_name     = agent.get_map_name()
-            _state.player_pos   = agent.get_player_xy()
+            _state.frames_run += 1
+            _state.map_name = agent.get_map_name()
+            _state.player_pos = agent.get_player_xy()
 
     except Exception as e:
         print(f"[PokemonSkill] Agent loop error: {e}")
     finally:
+        if _PROJECT_POKEMON in sys.path:
+            sys.path.remove(_PROJECT_POKEMON)
+        if iris_core:
+            sys.modules["core"] = iris_core
+
         _state.running = False
         print("[PokemonSkill] Agent loop ended.")
 
 
 # ── Public tool functions ─────────────────────────────────────────────────
+
 
 def launch_game(goal: str = "16,13") -> str:
     """
@@ -90,7 +102,7 @@ def launch_game(goal: str = "16,13") -> str:
     # Parse goal
     goal_xy = None
     try:
-        x, y   = goal.split(",")
+        x, y = goal.split(",")
         goal_xy = (int(x.strip()), int(y.strip()))
     except Exception:
         goal_xy = (16, 13)
@@ -107,22 +119,21 @@ def launch_game(goal: str = "16,13") -> str:
 
     # Start Python agent server in background thread
     _state._stop_event.clear()
-    _state.running   = True
+    _state.running = True
     _state.frames_run = 0
     _state.current_goal = goal_xy
 
     t = threading.Thread(
-        target=_agent_loop,
-        args=(goal_xy,),
-        daemon=True,
-        name="iris-pokemon-agent"
+        target=_agent_loop, args=(goal_xy,), daemon=True, name="iris-pokemon-agent"
     )
     _state._thread = t
     t.start()
 
-    return (f"Alright, launching Pokemon FireRed! "
-            f"I'll navigate to tile {goal_xy[0]}, {goal_xy[1]}. "
-            f"Give me a second for BizHawk to connect.")
+    return (
+        f"Alright, launching Pokemon FireRed! "
+        f"I'll navigate to tile {goal_xy[0]}, {goal_xy[1]}. "
+        f"Give me a second for BizHawk to connect."
+    )
 
 
 def get_game_status() -> str:
@@ -132,9 +143,11 @@ def get_game_status() -> str:
     ready = _state._agent is not None and _state._agent.is_game_ready()
     if not ready:
         return "BizHawk is connected but I'm still waiting for the game to start."
-    return (f"I'm on {_state.map_name} at position "
-            f"({_state.player_pos[0]}, {_state.player_pos[1]}), "
-            f"{_state.frames_run} frames in.")
+    return (
+        f"I'm on {_state.map_name} at position "
+        f"({_state.player_pos[0]}, {_state.player_pos[1]}), "
+        f"{_state.frames_run} frames in."
+    )
 
 
 def set_objective(goal: str) -> str:
@@ -146,7 +159,7 @@ def set_objective(goal: str) -> str:
         return "I'm not in game yet — launch first."
     try:
         x, y = goal.split(",")
-        xy   = (int(x.strip()), int(y.strip()))
+        xy = (int(x.strip()), int(y.strip()))
     except Exception:
         return "Give me the goal as x,y — like 16,13."
 
@@ -181,19 +194,19 @@ POKEMON_TOOLS = [
                 "properties": {
                     "goal": {
                         "type": "string",
-                        "description": "Target tile as 'x,y'. Default is Oak's lab entrance (16,13)."
+                        "description": "Target tile as 'x,y'. Default is Oak's lab entrance (16,13).",
                     }
-                }
-            }
-        }
+                },
+            },
+        },
     },
     {
         "type": "function",
         "function": {
             "name": "get_game_status",
             "description": "Get current Pokemon game status — map, position, frames run.",
-            "parameters": {"type": "object", "properties": {}}
-        }
+            "parameters": {"type": "object", "properties": {}},
+        },
     },
     {
         "type": "function",
@@ -205,30 +218,35 @@ POKEMON_TOOLS = [
                 "properties": {
                     "goal": {
                         "type": "string",
-                        "description": "New target tile as 'x,y'."
+                        "description": "New target tile as 'x,y'.",
                     }
                 },
-                "required": ["goal"]
-            }
-        }
+                "required": ["goal"],
+            },
+        },
     },
     {
         "type": "function",
         "function": {
             "name": "stop_game",
             "description": "Stop playing Pokemon and shut down the agent.",
-            "parameters": {"type": "object", "properties": {}}
-        }
+            "parameters": {"type": "object", "properties": {}},
+        },
     },
 ]
 
 
 # ── Tool dispatcher (call this from wake_up.py / iris_agent.py) ──────────
 
+
 def handle_pokemon_tool(tool_name: str, args: dict) -> str:
     """Route a tool call from Iris to the right function."""
-    if   tool_name == "launch_game":    return launch_game(args.get("goal", "16,13"))
-    elif tool_name == "get_game_status": return get_game_status()
-    elif tool_name == "set_objective":  return set_objective(args.get("goal", ""))
-    elif tool_name == "stop_game":      return stop_game()
+    if tool_name == "launch_game":
+        return launch_game(args.get("goal", "16,13"))
+    elif tool_name == "get_game_status":
+        return get_game_status()
+    elif tool_name == "set_objective":
+        return set_objective(args.get("goal", ""))
+    elif tool_name == "stop_game":
+        return stop_game()
     return f"Unknown pokemon tool: {tool_name}"

@@ -271,7 +271,7 @@ class Iris:
                             nudge_prompt = (
                                 f"I am looking at your screen right now. I see this text: '{screen_text}'. "
                                 f"Make a single, casual, and witty 1-sentence comment about what I am looking at. "
-                                f"Do not say 'I see' or 'I am looking at'. Just comment on the topic directly as if we are pair programming."
+                                f"Do not say 'I see' or 'I am looking at'. Just comment on the topic directly as if we are pair programming. Absolutely NO emojis."
                             )
                         elif len(self.messages) > 3:
                             nudge_prompt = (
@@ -300,14 +300,20 @@ class Iris:
                     nudge_prompt, save=False, use_tools=False, avatar=avatar
                 )
 
+            # MUST BE OUTSIDE THE LOCK, BUT INSIDE THE WHILE TRUE LOOP
             if response_text:
-                # Speaking already happened inside _speak_streamed(); just log and clean up
                 print(f"Iris (Idle): {response_text}")
+
+                # Flag that the last interaction was an idle nudge
+                self.last_was_idle = True
+
+                # Force her to remember she just said this
                 with self.lock:
-                    self.last_was_idle = True
                     self.messages.append(
                         {"role": "assistant", "content": response_text}
                     )
+
+                # Hard reset the timer so it waits a full 45 seconds again
                 self.reset_idle_timer()
 
     def _speak_streamed(self, response_stream, avatar=None):
@@ -346,16 +352,20 @@ class Iris:
             if any(buffer.rstrip().endswith(p) for p in sentence_endings):
                 sentence = buffer.strip()
                 if sentence and self.vm:
-                    if avatar is not None:
-                        avatar.show_speaking()
-                    self.vm.speak(strip_markdown(sentence), avatar=avatar)
+                    clean_text = strip_markdown(sentence)
+                    if clean_text:  # Skip empty strings after markdown stripping
+                        if avatar is not None:
+                            avatar.show_speaking()
+                        self.vm.speak(clean_text, avatar=avatar)
                 buffer = ""
 
         # Flush any trailing text that didn't end with punctuation
         if buffer.strip() and self.vm and not detected_tool_calls:
-            if avatar is not None:
-                avatar.show_speaking()
-            self.vm.speak(strip_markdown(buffer.strip()), avatar=avatar)
+            clean_text = strip_markdown(buffer.strip())
+            if clean_text:  # Skip empty strings after markdown stripping
+                if avatar is not None:
+                    avatar.show_speaking()
+                self.vm.speak(clean_text, avatar=avatar)
 
         self.last_spoke_time = time.time()
 
@@ -544,6 +554,32 @@ class Iris:
                             "role": "tool",
                             "content": tool_content,
                             "name": "look_at_screen",
+                        }
+                    )
+                elif function_name == "read_screen":
+                    print("[Tool] Reading screen via OCR...")
+                    import pytesseract
+                    from core.vision import capture_screen
+
+                    try:
+                        capture_screen()
+                        screen_text = pytesseract.image_to_string(
+                            "captures/test_screen.png"
+                        ).strip()
+                        if not screen_text:
+                            screen_text = "[No readable text found on screen]"
+                        else:
+                            screen_text = screen_text[:1000]  # Cap length to save tokens
+                        tool_response = f"Screen contents: {screen_text}"
+                    except Exception as e:
+                        tool_response = f"Failed to read screen: {e}"
+
+                    self.messages.append(tool_message)
+                    self.messages.append(
+                        {
+                            "role": "tool",
+                            "content": tool_response,
+                            "name": "read_screen",
                         }
                     )
 

@@ -42,6 +42,7 @@ class GameWindow:
         self.window.configure(bg=BG_DARK)
         self.window.resizable(False, False)
         self.window.attributes("-topmost", True)
+        self.window.protocol("WM_DELETE_WINDOW", self._handle_close)
 
         W, H = 620, 460
         self.window.geometry(f"{W}x{H}")
@@ -179,6 +180,35 @@ class GameWindow:
         )
         status_lbl.pack(fill="x")
 
+        # ── Buttons (Hidden by default) ───────────────────────
+        self.button_frame = tk.Frame(self.window, bg=BG_DARK)
+
+        self.btn_play_again = tk.Button(
+            self.button_frame,
+            text="Play Again",
+            font=("Segoe UI", 12, "bold"),
+            bg=ACCENT_BLUE,
+            fg=BG_DARK,
+            relief="flat",
+            command=lambda: (
+                self.on_play_again_cb() if hasattr(self, "on_play_again_cb") else None
+            ),
+        )
+        self.btn_play_again.pack(side="left", padx=20, pady=10)
+
+        self.btn_close = tk.Button(
+            self.button_frame,
+            text="Close Game",
+            font=("Segoe UI", 12, "bold"),
+            bg=ACCENT_RED,
+            fg="white",
+            relief="flat",
+            command=lambda: (
+                self.on_close_cb() if hasattr(self, "on_close_cb") else None
+            ),
+        )
+        self.btn_close.pack(side="right", padx=20, pady=10)
+
     def _make_card(self, parent, side):
         frame = tk.Frame(parent, bg=BG_CARD, relief="flat", bd=0)
         frame.pack(
@@ -302,3 +332,13 @@ class GameWindow:
 
     def hide(self):
         self.window.after(0, self.window.withdraw)
+
+    def _handle_close(self):
+        """Route window close to the provided callback instead of destroying the window."""
+        if hasattr(self, "on_close_cb"):
+            try:
+                self.on_close_cb()
+                return
+            except Exception:
+                pass
+        self.hide()
