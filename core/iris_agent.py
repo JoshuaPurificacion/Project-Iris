@@ -234,11 +234,12 @@ class Iris:
             print(f"\n[System] 🔄 Core swapped to: {mode_name.upper()} MODE")
 
             if self.vm:
-                msg = (
-                    "Systems recalibrated. Ready."
-                    if mode_name == "default"
-                    else "Switching to Exhibit Mode. Ready for the Arduin-o-vation presentation!"
-                )
+                if mode_name == "default":
+                    msg = "Systems recalibrated. Ready."
+                elif mode_name == "gaming":
+                    msg = "Booting up the game. Don't distract me, I'm focusing!"
+                else:
+                    msg = "Switching to Exhibit Mode. Ready for the Arduin-o-vation presentation!"
                 self.vm.speak(msg, avatar=avatar)
 
     def idle_loop(self, avatar=None):

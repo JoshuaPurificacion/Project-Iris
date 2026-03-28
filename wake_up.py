@@ -53,6 +53,15 @@ def rpg_game_loop(iris, avatar, game_window):
             # Final reaction from Iris
             prompt = rpg_skill.format_prompt(state)
             iris.chat(prompt, save=False, use_tools=False, avatar=avatar)
+
+            # Wait for the TTS queue to clear so she finishes her speech before returning control
+            while (
+                not iris.vm.speech_queue.empty() or iris.vm.is_speaking.is_set()
+            ) and _rpg_running:
+                time.sleep(0.5)
+
+            game_window.set_status("Game over. Do you want me to play again?")
+            log_system("[RPG] Game over state reached. Waiting for user action.")
             break
 
         # Format prompt and get Iris's decision
@@ -69,16 +78,19 @@ def rpg_game_loop(iris, avatar, game_window):
         result = game.take_action(action)
         game_window.refresh(result["state"])
 
-        # Brief pause between turns so it feels natural
-        time.sleep(3)
+        # Sync the Game Loop with TTS
+        # Wait until she actually finishes speaking before generating the next turn
+        while (
+            not iris.vm.speech_queue.empty() or iris.vm.is_speaking.is_set()
+        ) and _rpg_running:
+            time.sleep(0.5)
 
-    log_system("[RPG] Game loop ended.")
-    game_window.set_status("Game over. Say 'start game' to play again.")
-    iris.switch_mode("default", avatar=avatar)
+        # Brief natural pause between turns
+        if _rpg_running:
+            time.sleep(1)
 
-    with _rpg_lock:
-        _rpg_running = False
-        _rpg_game = None
+    # Note: Do not switch mode or close window here. Let the user decide via UI.
+    log_system("[RPG] Game thread exiting loop.")
 
 
 def handle_game_action(action, iris, avatar, game_window):
@@ -96,7 +108,8 @@ def handle_game_action(action, iris, avatar, game_window):
 
     elif action == "start_micro_rpg":
         with _rpg_lock:
-            if _rpg_running:
+            # If a game is running AND it's not over, block it
+            if _rpg_running and _rpg_game and not _rpg_game.is_over():
                 iris.vm.speak(
                     "A game is already running. Stop it first.", avatar=avatar
                 )
@@ -212,6 +225,12 @@ def main():
 
     # --- Game window (hidden until game starts) ---
     game_window = GameWindow(avatar.window)
+    game_window.on_play_again_cb = lambda: handle_game_action(
+        "start_micro_rpg", iris, avatar, game_window
+    )
+    game_window.on_close_cb = lambda: handle_game_action(
+        "stop_game", iris, avatar, game_window
+    )
 
     # --- Voice and agent setup ---
     print("Loading local Whisper model...")

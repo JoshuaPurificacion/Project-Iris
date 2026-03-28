@@ -11,19 +11,19 @@ import tkinter as tk
 from tkinter import font as tkfont
 
 # ── Color palette ─────────────────────────────────────────────
-BG_DARK      = "#0d0d1a"
-BG_PANEL     = "#1a1a2e"
-BG_CARD      = "#16213e"
-ACCENT_RED   = "#e63946"
-ACCENT_BLUE  = "#4fc3f7"
+BG_DARK = "#0d0d1a"
+BG_PANEL = "#1a1a2e"
+BG_CARD = "#16213e"
+ACCENT_RED = "#e63946"
+ACCENT_BLUE = "#4fc3f7"
 ACCENT_GREEN = "#00ff88"
-ACCENT_GOLD  = "#ffd700"
-ACCENT_GRAY  = "#8888aa"
-TEXT_WHITE   = "#f0f0ff"
-TEXT_DIM     = "#9999bb"
-HP_GREEN     = "#2ecc71"
-HP_YELLOW    = "#f1c40f"
-HP_RED       = "#e74c3c"
+ACCENT_GOLD = "#ffd700"
+ACCENT_GRAY = "#8888aa"
+TEXT_WHITE = "#f0f0ff"
+TEXT_DIM = "#9999bb"
+HP_GREEN = "#2ecc71"
+HP_YELLOW = "#f1c40f"
+HP_RED = "#e74c3c"
 
 
 def _hp_color(hp, max_hp):
@@ -46,7 +46,7 @@ class GameWindow:
         W, H = 620, 460
         self.window.geometry(f"{W}x{H}")
         self._center(W, H)
-        self.window.withdraw()   # hidden until game starts
+        self.window.withdraw()  # hidden until game starts
 
         self._build_ui()
 
@@ -64,18 +64,26 @@ class GameWindow:
         # ── Title bar ─────────────────────────────────────────
         self.title_var = tk.StringVar(value="🏰  Iris's Adventure — Floor 1")
         title_lbl = tk.Label(
-            self.window, textvariable=self.title_var,
+            self.window,
+            textvariable=self.title_var,
             font=("Segoe UI", 13, "bold"),
-            fg=ACCENT_GOLD, bg=BG_DARK, pady=6
+            fg=ACCENT_GOLD,
+            bg=BG_DARK,
+            pady=6,
         )
         title_lbl.pack(fill="x")
 
         # ── Room description ──────────────────────────────────
         self.room_var = tk.StringVar(value="...")
         room_lbl = tk.Label(
-            self.window, textvariable=self.room_var,
-            font=("Segoe UI", 9), fg=TEXT_DIM, bg=BG_DARK,
-            wraplength=580, justify="center", pady=2
+            self.window,
+            textvariable=self.room_var,
+            font=("Segoe UI", 9),
+            fg=TEXT_DIM,
+            bg=BG_DARK,
+            wraplength=580,
+            justify="center",
+            pady=2,
         )
         room_lbl.pack(fill="x")
 
@@ -88,25 +96,33 @@ class GameWindow:
         # Player card
         self.player_frame = self._make_card(combat_frame, side="left")
         # Enemy card
-        self.enemy_frame  = self._make_card(combat_frame, side="right")
+        self.enemy_frame = self._make_card(combat_frame, side="right")
 
         # Player internals
         self.player_name_lbl = tk.Label(
-            self.player_frame, text="🧝 IRIS",
-            font=("Segoe UI", 11, "bold"), fg=ACCENT_BLUE, bg=BG_CARD
+            self.player_frame,
+            text="🧝 IRIS",
+            font=("Segoe UI", 11, "bold"),
+            fg=ACCENT_BLUE,
+            bg=BG_CARD,
         )
         self.player_name_lbl.pack(anchor="w", padx=8, pady=(6, 2))
 
-        self.player_hp_bar  = self._make_hp_bar(self.player_frame)
-        self.player_hp_lbl  = self._make_label(self.player_frame, "HP: —", TEXT_WHITE)
+        self.player_hp_bar = self._make_hp_bar(self.player_frame)
+        self.player_hp_lbl = self._make_label(self.player_frame, "HP: —", TEXT_WHITE)
         self.player_wpn_lbl = self._make_label(self.player_frame, "⚔  —", ACCENT_GOLD)
         self.player_inv_lbl = self._make_label(self.player_frame, "🎒  —", ACCENT_GREEN)
-        self.player_gld_lbl = self._make_label(self.player_frame, "💰  0 gold", ACCENT_GOLD)
+        self.player_gld_lbl = self._make_label(
+            self.player_frame, "💰  0 gold", ACCENT_GOLD
+        )
 
         # Enemy internals
         self.enemy_name_lbl = tk.Label(
-            self.enemy_frame, text="👹 ???",
-            font=("Segoe UI", 11, "bold"), fg=ACCENT_RED, bg=BG_CARD
+            self.enemy_frame,
+            text="👹 ???",
+            font=("Segoe UI", 11, "bold"),
+            fg=ACCENT_RED,
+            bg=BG_CARD,
         )
         self.enemy_name_lbl.pack(anchor="w", padx=8, pady=(6, 2))
 
@@ -118,8 +134,12 @@ class GameWindow:
 
         # ── Event log ─────────────────────────────────────────
         log_header = tk.Label(
-            self.window, text="📜  Event Log",
-            font=("Segoe UI", 9, "bold"), fg=TEXT_DIM, bg=BG_DARK, anchor="w"
+            self.window,
+            text="📜  Event Log",
+            font=("Segoe UI", 9, "bold"),
+            fg=TEXT_DIM,
+            bg=BG_DARK,
+            anchor="w",
         )
         log_header.pack(fill="x", padx=14)
 
@@ -129,8 +149,10 @@ class GameWindow:
         self.log_text = tk.Text(
             log_frame,
             font=("Consolas", 9),
-            bg=BG_PANEL, fg=TEXT_WHITE,
-            relief="flat", bd=0,
+            bg=BG_PANEL,
+            fg=TEXT_WHITE,
+            relief="flat",
+            bd=0,
             state="disabled",
             height=8,
             wrap="word",
@@ -139,23 +161,32 @@ class GameWindow:
         self.log_text.pack(fill="both", expand=True, padx=6, pady=4)
 
         # Tag colours for log entries
-        self.log_text.tag_config("crit",    foreground=ACCENT_GOLD)
-        self.log_text.tag_config("death",   foreground=ACCENT_RED)
-        self.log_text.tag_config("loot",    foreground=ACCENT_GREEN)
-        self.log_text.tag_config("system",  foreground=TEXT_DIM)
-        self.log_text.tag_config("normal",  foreground=TEXT_WHITE)
+        self.log_text.tag_config("crit", foreground=ACCENT_GOLD)
+        self.log_text.tag_config("death", foreground=ACCENT_RED)
+        self.log_text.tag_config("loot", foreground=ACCENT_GREEN)
+        self.log_text.tag_config("system", foreground=TEXT_DIM)
+        self.log_text.tag_config("normal", foreground=TEXT_WHITE)
 
         # ── Status bar ────────────────────────────────────────
         self.status_var = tk.StringVar(value="Waiting for Iris...")
         status_lbl = tk.Label(
-            self.window, textvariable=self.status_var,
-            font=("Segoe UI", 8), fg=ACCENT_GRAY, bg=BG_DARK, pady=3
+            self.window,
+            textvariable=self.status_var,
+            font=("Segoe UI", 8),
+            fg=ACCENT_GRAY,
+            bg=BG_DARK,
+            pady=3,
         )
         status_lbl.pack(fill="x")
 
     def _make_card(self, parent, side):
         frame = tk.Frame(parent, bg=BG_CARD, relief="flat", bd=0)
-        frame.pack(side=side, fill="both", expand=True, padx=(0, 4) if side == "left" else (4, 0))
+        frame.pack(
+            side=side,
+            fill="both",
+            expand=True,
+            padx=(0, 4) if side == "left" else (4, 0),
+        )
         return frame
 
     def _make_hp_bar(self, parent):
@@ -165,8 +196,7 @@ class GameWindow:
 
     def _make_label(self, parent, text, color):
         lbl = tk.Label(
-            parent, text=text,
-            font=("Segoe UI", 9), fg=color, bg=BG_CARD, anchor="w"
+            parent, text=text, font=("Segoe UI", 9), fg=color, bg=BG_CARD, anchor="w"
         )
         lbl.pack(fill="x", padx=8, pady=1)
         return lbl
@@ -192,25 +222,29 @@ class GameWindow:
         self.window.after(0, lambda: self._apply_state(state))
 
     def _apply_state(self, state: dict):
-        floor  = state.get("floor", 1)
-        room   = state.get("room_name", "???")
+        floor = state.get("floor", 1)
+        room = state.get("room_name", "???")
         status = state.get("status", "active")
 
         # Title
-        status_tag = {"victory": "⚔ VICTORY!", "defeat": "💀 DEFEATED", "escaped": "🏃 ESCAPED"}.get(status, f"Floor {floor}")
+        status_tag = {
+            "victory": "⚔ VICTORY!",
+            "defeat": "💀 DEFEATED",
+            "escaped": "🏃 ESCAPED",
+        }.get(status, f"Floor {floor}")
         self.title_var.set(f"🏰  Iris's Adventure — {status_tag}")
 
         # Room
         self.room_var.set(state.get("room_desc", ""))
 
         # Player
-        p_hp     = state["player_hp"]
-        p_max    = state["player_max_hp"]
-        wpn      = state["weapon_name"]
-        wpn_atk  = state["weapon_atk"]
-        wpn_frg  = state["weapon_forge"]
-        potions  = state["potions"]
-        gold     = state["player_gold"]
+        p_hp = state["player_hp"]
+        p_max = state["player_max_hp"]
+        wpn = state["weapon_name"]
+        wpn_atk = state["weapon_atk"]
+        wpn_frg = state["weapon_forge"]
+        potions = state["potions"]
+        gold = state["player_gold"]
 
         self.player_hp_lbl.config(text=f"HP: {p_hp} / {p_max}")
         self._draw_hp_bar(self.player_hp_bar, p_hp, p_max)
@@ -220,9 +254,9 @@ class GameWindow:
 
         # Enemy
         e_name = state.get("enemy_name") or "—"
-        e_hp   = state.get("enemy_hp", 0)
-        e_max  = state.get("enemy_max_hp", 1)
-        e_atk  = state.get("enemy_atk", 0)
+        e_hp = state.get("enemy_hp", 0)
+        e_max = state.get("enemy_max_hp", 1)
+        e_atk = state.get("enemy_atk", 0)
 
         self.enemy_name_lbl.config(text=f"👹 {e_name.upper()}")
         self.enemy_hp_lbl.config(text=f"HP: {e_hp} / {e_max}")
@@ -230,7 +264,14 @@ class GameWindow:
         self.enemy_atk_lbl.config(text=f"⚔  ATK: {e_atk}")
 
         # Status bar
-        self.status_var.set(f"Rooms cleared: {state.get('rooms_cleared', 0)}  |  Gold: {gold}")
+        self.status_var.set(
+            f"Rooms cleared: {state.get('rooms_cleared', 0)}  |  Gold: {gold}"
+        )
+
+        if status in ("victory", "defeat", "escaped"):
+            self.button_frame.pack(fill="x", pady=4)
+        else:
+            self.button_frame.pack_forget()
 
         # Log
         self._refresh_log(state.get("full_log", []))

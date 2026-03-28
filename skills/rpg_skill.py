@@ -13,18 +13,50 @@ VALID_ACTIONS = ["attack", "flee", "use item"]
 # Keywords that map to each action
 ACTION_KEYWORDS = {
     "attack": [
-        "attack", "strike", "hit", "fight", "slash", "stab", "swing",
-        "charge", "punch", "smash", "go for it", "kill", "destroy",
-        "offensive", "engage", "take it down", "take them down",
+        "attack",
+        "strike",
+        "hit",
+        "fight",
+        "slash",
+        "stab",
+        "swing",
+        "charge",
+        "punch",
+        "smash",
+        "go for it",
+        "kill",
+        "destroy",
+        "offensive",
+        "engage",
+        "take it down",
+        "take them down",
     ],
     "flee": [
-        "flee", "run", "escape", "retreat", "back off", "get out",
-        "leave", "bail", "withdraw", "avoid", "hide",
+        "flee",
+        "run",
+        "escape",
+        "retreat",
+        "back off",
+        "get out",
+        "leave",
+        "bail",
+        "withdraw",
+        "avoid",
+        "hide",
     ],
     "use item": [
-        "use item", "potion", "heal", "drink", "use potion",
-        "use it", "recover", "restore", "chug", "take potion",
-        "use my potion", "use the potion",
+        "use item",
+        "potion",
+        "heal",
+        "drink",
+        "use potion",
+        "use it",
+        "recover",
+        "restore",
+        "chug",
+        "take potion",
+        "use my potion",
+        "use the potion",
     ],
 }
 
@@ -34,40 +66,40 @@ def format_prompt(state: dict) -> str:
     Build the context string injected before Iris generates her turn decision.
     Keeps it short — she only needs the essentials to make a smart decision.
     """
-    p_hp    = state["player_hp"]
-    p_max   = state["player_max_hp"]
-    hp_pct  = int((p_hp / p_max) * 100) if p_max > 0 else 0
+    p_hp = state["player_hp"]
+    p_max = state["player_max_hp"]
+    hp_pct = int((p_hp / p_max) * 100) if p_max > 0 else 0
 
-    e_name  = state.get("enemy_name", "enemy")
-    e_hp    = state.get("enemy_hp", 0)
-    e_max   = state.get("enemy_max_hp", 1)
-    e_pct   = int((e_hp / e_max) * 100) if e_max > 0 else 0
+    e_name = state.get("enemy_name", "enemy")
+    e_hp = state.get("enemy_hp", 0)
+    e_max = state.get("enemy_max_hp", 1)
+    e_pct = int((e_hp / e_max) * 100) if e_max > 0 else 0
 
-    wpn     = state["weapon_name"]
+    wpn = state["weapon_name"]
     wpn_atk = state["weapon_atk"]
     has_pot = state["has_potion"]
     potions = state["potions"]
-    gold    = state["player_gold"]
-    floor   = state["floor"]
-    room    = state["room_name"]
-    status  = state["status"]
+    gold = state["player_gold"]
+    floor = state["floor"]
+    room = state["room_name"]
+    status = state["status"]
 
     # Game-over states
     if status == "victory":
         return (
             "You just defeated the final boss and won the dungeon! "
             "React with pure excitement — you conquered the Dragon's Lair. "
-            "Keep it to 1-2 sentences."
+            "Then, explicitly ask the user if they want to play again or watch you do another run. Keep it to 1-2 sentences."
         )
     if status == "defeat":
         return (
-            "You just died. React with genuine disappointment — "
-            "Iris fell in battle. Keep it to 1-2 sentences."
+            "You just died in the dungeon. React with genuine disappointment — "
+            "Iris fell in battle. Then, explicitly ask the user if they want you to try again. Keep it to 1-2 sentences."
         )
     if status == "escaped":
         return (
             "You just fled the dungeon. React with a mix of relief and mild shame. "
-            "Keep it to 1-2 sentences."
+            "Then, explicitly ask the user if they want you to try again. Keep it to 1-2 sentences."
         )
 
     # Recent events for context
@@ -77,7 +109,9 @@ def format_prompt(state: dict) -> str:
     # Low HP warning
     low_hp_note = ""
     if hp_pct <= 25:
-        low_hp_note = " WARNING: critically low HP — consider using a potion if available."
+        low_hp_note = (
+            " WARNING: critically low HP — consider using a potion if available."
+        )
     elif hp_pct <= 50:
         low_hp_note = " HP is below half — be cautious."
 
@@ -91,8 +125,8 @@ def format_prompt(state: dict) -> str:
         f"Gold: {gold}. "
         f"Enemy: {e_name} — HP {e_hp}/{e_max} ({e_pct}%). "
         f"Recent events: {recent_str}. "
-        f"Choose your action: attack, flee, or use item. "
-        f"Respond in 1-2 sentences in Iris's voice, then clearly state your choice."
+        f"Choose your action: [attack], [flee], or [use item]. "
+        f"Respond in 1-2 sentences in Iris's voice, then clearly state your choice in brackets."
     )
     return prompt
 
@@ -105,7 +139,12 @@ def parse_action(text: str) -> str:
     """
     text_lower = text.lower()
 
-    # Direct match first (highest confidence)
+    # Match bracketed exact commands first
+    for action in VALID_ACTIONS:
+        if f"[{action}]" in text_lower:
+            return action
+
+    # Direct match (highest confidence fallback)
     for action in VALID_ACTIONS:
         if action in text_lower:
             return action
