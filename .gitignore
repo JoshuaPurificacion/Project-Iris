@@ -9,6 +9,7 @@ __pycache__/
 *.class
 .mypy_cache/
 .pytest_cache/
+.ruff_cache/
 
 # Environment variables
 .env
@@ -28,7 +29,19 @@ vts_token.txt
 # Generated / Temporary
 captures/
 tmp/
+.tmp/
 archive/
+
+# Local tooling / workspace state
+.agents/
+.cursor/
+.sixth/
+.ipynb_checkpoints/
+
+# Generated API probe outputs
+scripts/test_api_inspect.txt
+scripts/test_api_results.txt
+scripts/test_api_jokers.txt
 
 # Editor / OS
 .vscode/

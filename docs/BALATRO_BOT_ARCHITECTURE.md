@@ -1,54 +1,136 @@
 # Balatro Bot Architecture
 
-The Balatro bot is an autonomous decision-making engine designed to play the game Balatro optimally, utilizing heuristics, game state evaluation, and a defined strategy pattern.
+This document describes the current Balatro runtime architecture used by Project Iris.
 
-## Core Implementations & Strategy
+## Overview
 
-### 1. Checkered Deck Enforcement
-The bot strictly forces a **Checkered Deck** strategy. This emphasizes Flush-based builds (Spades and Hearts), simplifying the hand probability distribution and enabling specialized scoring strategies around Flush synergies.
+The bot uses a modular loop with three main layers:
 
-*   **Enforcement Point**: Decks are hardcoded to the Checkered deck in the router and prompt builder during the main menu, ensuring all subsequent phases are tailored to this structure.
+1. State + Context Layer
+- Reads live JSON-RPC game state.
+- Builds planner-safe context with phase constraints and strategy hints.
 
-### 2. Shop Guidance & Sell-to-Upgrade Logic
-The bot doesn't just evaluate cards in isolation; it understands its capacity limits. When the Joker slots are full and a high-value scaling Joker appears in the shop, the bot uses **Sell-to-Upgrade Guidance**.
+2. Planning Layer
+- Uses a strict JSON planner output contract.
+- Produces a single action + indices + short reasoning each tick.
 
-*   Explicit Output: Instead of just rating a Joker highly, the bot outputs structured recommendations like `-> RECOMMENDED: sell_joker [index] then buy_shop [index]`.
-*   This logic bridges gap between mathematical evaluation and actionable in-game steps, preventing the bot from "freezing" when deciding between keeping a mediocre Joker versus acquiring a powerful late-game piece.
+3. Execution Layer
+- Routes to typed action handlers.
+- Applies guardrails to prevent invalid or low-value decisions.
 
-### 3. Conditional Joker Scoring (Scaling Math)
-Jokers are scored based on the *current actual game state*, rather than raw base values.
+## Runtime Flow
 
-*   `_estimate_scaling_joker_bonus`: Dynamically calculates the value of Jokers that scale (e.g., Hologram scaling off added cards, Steel Joker scaling off Steel cards in hand).
-*   By injecting `raw_state` into the calculation algorithms, the bot determines the true mathematical impact of synergizing pieces.
+1. `BalatroSession` refreshes game state each tick.
+2. `PhaseRouter` determines current phase and allowed actions.
+3. `PlannerContextBuilder` composes state, constraints, and hints.
+4. Planner returns JSON action.
+5. Action dispatch executes through registry-backed handlers.
+6. Result is logged to memory and telemetry.
+7. Persona reaction runs asynchronously.
 
-### 4. Planet Prioritization
-The bot aggressively weights **Jupiter** (the Flush-leveling planet) due to the Checkered Deck lock. All consumable evaluations factor in this synergy to continuously elevate the run's scoring baseline.
+## Key Components
 
-## Key Modules & Classes
+### Session Core
+- `skills/balatro/session.py`
+- Responsibilities:
+  - Tick loop and softlock escape handling
+  - Planner context assembly
+  - Guided options generation
+  - Shop strategy block generation
 
-### `skills/balatro_bot/modules/algorithms.py`
-The mathematical heart of the bot.
-*   **Functions**:
-    *   `_state_cards(raw_state)`: Parses the live JSON deck state representation into operable python structures.
-    *   `_estimate_scaling_joker_bonus(joker_key, raw_state)`: Computes situational scaling values.
-    *   `_lineup_strategic_bonus(joker_name, current_jokers)`: Analyzes synergistic effects between current and prospective Jokers.
-    *   Consumable Evaluators: Hard-bias towards `Jupiter` and Tarot cards that augment Heart/Spade infrastructure.
+### Phase Router
+- `skills/balatro/router.py`
+- Responsibilities:
+  - Phase detection (`menu`, `blind`, `play_discard`, `shop`, `pack`, `round_eval`)
+  - Phase-specific guidance and allowed actions
 
-### `skills/balatro/session.py`
-Manages state persistence and constructs actionable instructions for the LLM based on live memory.
-*   **Methods**:
-    *   `_build_shop_strategy_block(raw_state)`: Connects algorithms directly to prompt injections, actively recommending `sell-to-upgrade` moves based on comparative evaluations.
+### Prompt Builder
+- `skills/balatro/prompt_builder.py`
+- Responsibilities:
+  - Build final planner context payload
+  - Inject state constraints and run profile data
+  - Add shop and pack state restrictions
 
-### `skills/balatro/router.py` & `skills/balatro/actions/*.py`
-Handles transitions across game phases (Blind selection, playing hands, shopping).
-*   Enforces unconditional structural decisions (e.g., forcing the `CHECKERED` deck selection in `actions/shop.py`).
+### Action System
+- `skills/balatro/actions/`
+- Notable handlers:
+  - `shop.py`: buy/reroll/start-run actions with economy guardrails
+  - `utility.py`: sell/use/rearrange actions with safety checks
+  - `play.py`: play/discard execution and retry logic
 
-### Testing Infrastructure (`tests/test_balatro_algorithms.py`)
-Ensures heuristics and routing logic remain mathematically consistent through focused unit tests targeting conditional scoring branches and deck biases.
+#### `UseConsumableAction` Guardrail Tiers
 
-## Flow of Data
+**Tier 1 — Joker dependency check:**
+Blocks consumables whose effect description references `"joker"` when no Jokers are owned,
+unless the effect creates or spawns one. Reads from `consumable.value.effect`.
 
-1.  **State Ingestion**: Raw JSON state from the Balatro API is captured by the main bot loop and passed to `session.py`.
-2.  **Algorithmic Analysis**: `algorithms.py` recursively examines hand contents, current Jokers, Shop contents, and Pack options against historical metadata and synergy logic.
-3.  **Strategy Formulation**: `session.py` compiles these mathematical insights into human-readable strategic imperatives (like prioritize Jupiter, or Sell Joker 2 for Shop item 1).
-4.  **Action Execution**: Routing logic (e.g., `router.py`, `shop.py`) intercepts these imperatives, formats them into API-compliant commands, and executes them within the game window.
+**Tier 2 — Wasted enhancement check:**
+Blocks targeting a hand card that already has the same enhancement the Tarot applies.
+Only active when `consumable.modifier.enhancement == "ENHANCE"`.
+Parses the target enhancement from `consumable.value.effect` via regex `to (\w+) Cards?`,
+then compares to each target card's `hand_card.modifier.enhancement`.
+Returns a specific error message back to the LLM so it can replan with a valid target.
+
+### API Client
+- `skills/balatro_client.py`
+- Responsibilities:
+  - JSON-RPC contract wrapper
+  - Typed game-state model
+  - LLM context serialization
+  - Shop advisor enrichment in context payload
+
+#### Confirmed API Contract for Consumable Use
+
+| Action | Method | Payload |
+|---|---|---|
+| Use consumable (no targets) | `use` | `{"consumable": idx}` |
+| Use consumable (with targets) | `use` | `{"consumable": idx, "cards": [t...]}` |
+| Choose pack card (with targets) | `pack` | `{"card": idx, "cards": [t...]}` |
+
+The key for target hand cards is `"cards"`, not `"targets"`. Verified via API fuzzer (probe F2).
+The `select` endpoint is state-gated to `BLIND_SELECT` only and must never be called during play.
+
+### Algorithms / Heuristics
+- `skills/balatro_bot/modules/algorithms.py`
+- Responsibilities:
+  - Hand evaluation
+  - Consumable and pack option suggestions
+  - Joker advisor labels
+  - Theoretical shop impact math and safe-sell detection
+
+## Shop Optimization Model
+
+Current shop behavior combines deterministic guardrails with planner flexibility.
+
+### Theoretical Impact
+The algorithm estimates score deltas before committing to Joker changes:
+- `estimate_best_score(...)`
+- `evaluate_shop_joker_impact(...)`
+- `identify_safe_sell_jokers(...)`
+
+### Shop Strategy Block
+`session.py` injects a `SHOP STRATEGY` section into planner context during shop state with:
+- Money, reserve, surplus, reroll cost
+- Current Joker keep/sell risk labels
+- Item-level projected impact and replacement hints
+
+### Guardrails
+- Buy guardrails prevent low-value reserve breaks unless impact justifies it.
+- Reroll guardrails prevent wasteful or unsafe rerolls.
+- Sell guardrails block selling high-impact Jokers unless replacing with stronger options.
+
+## Validation Strategy
+
+Primary test coverage lives in:
+- `tests/test_balatro.py`
+- `tests/test_balatro_session.py`
+- `tests/test_balatro_algorithms.py`
+- `tests/test_balatro_router_prompt.py`
+
+These validate schema handling, session lifecycle, routing constraints, and algorithmic decisions including shop impact and safe-sell logic.
+
+## Notes
+
+- The planner remains the decision-maker, but guardrails enforce safety.
+- Architecture is designed to keep behavior explainable and debuggable through logs + telemetry.
+- Shop optimization now explicitly reasons about score impact rather than relying only on string heuristics.

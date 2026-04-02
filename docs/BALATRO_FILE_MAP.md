@@ -87,7 +87,11 @@ Quick snapshot tool that prints the current owned Jokers and shop Jokers to a te
 Captured sample output from the inspector script showing the raw Joker and shop JSON used for prompt work.
 
 ### `scripts/test_api.py`
-API inspection utility used for broader Balatro state debugging.
+API fuzzer and state inspector for Balatro debugging.
+- Default mode: fires 14 probe shapes to discover correct RPC method/payload for a given action.
+- `--inspect` mode: read-only dump of live `consumeables` and `hand` card JSON, used to
+  discover exact field names and nesting (e.g. confirmed `modifier.enhancement` and `value.effect`).
+- Results written to `scripts/test_api_results.txt` and `scripts/test_api_inspect.txt`.
 
 ### `scripts/test_api_inspect.txt`
 Saved output from API inspection runs, useful for verifying raw state payload structure.

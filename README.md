@@ -23,7 +23,7 @@ Project Iris is a fully offline, locally-run AI VTuber built for a university en
 - 🐾 **Trigger Hardware** — Controls OmniSense ESP32-CAM pet feeder via HTTP
 - 📝 **Quiz** — Tests visitors on Computer Engineering topics with score tracking
 - 🎮 **Game** — Autonomous Micro RPG mode where Iris plays a custom dungeon crawler overlay
-- 🃏 **Balatro** — Plays the hit deckbuilder via JSON-RPC, making tactical hands and optimal shop/pack choices
+- 🃏 **Balatro** — Plays the hit deckbuilder via JSON-RPC, using a Checkered-deck strategy, scaling Joker scoring, and sell-to-upgrade shop logic
 - 🎭 **Express** — Animated PNG avatar with state-based expressions and animations
 
 ---
