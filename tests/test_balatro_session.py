@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from skills.balatro.session import (
     BalatroSession,
     TickContext,
+    PlannerOutput,
     start_session,
     stop_session,
     get_active_session,
@@ -94,4 +95,34 @@ def test_session_isolation(mock_controller, mock_iris):
     
     assert s2.run_profile == {}, "Run profile leaked between sessions."
     assert len(s2.action_memory) == 0, "Action memory leaked between sessions."
+
+
+def test_planner_output_accepts_synergy_evaluation_field():
+    payload = {
+        "synergy_evaluation": "Scary Face adds face-card chips, Wily adds 3oak chips; still needs mult scaling.",
+        "action": "buy_shop",
+        "indices": [1],
+        "deck": "",
+        "reasoning": "Positive chip upgrade and affordable.",
+    }
+
+    parsed = PlannerOutput.model_validate(payload)
+
+    assert parsed.synergy_evaluation.startswith("Scary Face")
+    assert parsed.action == "buy_shop"
+    assert parsed.indices == [1]
+
+
+def test_planner_output_keeps_backward_compat_when_synergy_missing():
+    payload = {
+        "action": "continue",
+        "indices": [],
+        "deck": "",
+        "reasoning": "No valid buy.",
+    }
+
+    parsed = PlannerOutput.model_validate(payload)
+
+    assert parsed.synergy_evaluation == ""
+    assert parsed.action == "continue"
 

@@ -90,6 +90,7 @@ PLANNER_SYSTEM_PROMPT = """You are a silent Balatro game calculator. Your only j
 
 OUTPUT FORMAT (strict — no other text, no markdown):
 {
+    "synergy_evaluation": "<1-2 sentence fit analysis using card value.effect text and current build effects before deciding>",
   "action": "<action_name>",
   "indices": [<1-based integers>],
   "deck": "<deck_name_only_for_start_run>",
@@ -109,6 +110,7 @@ MANDATORY ARGUMENT RULES:
 - If a consumable requires selecting cards in your hand (e.g. Tarots), the FIRST index is the consumable's 1-based index, followed by the 1-based indices of the target hand cards. Example: {"action": "use_consumable", "indices": [1, 3, 5]}
 
 RULES:
+- "synergy_evaluation" must be written first and must explicitly evaluate how the candidate shop card's value.effect compounds with current owned Joker effects and current hand/build direction.
 - "action" must be exactly one of the allowed actions listed in the prompt.
 - "indices" contains 1-based card or item positions. Use empty array [] if not needed.
 - "deck" is ONLY populated for the start_run action. Leave as empty string "" otherwise.
@@ -144,6 +146,7 @@ class PlannerOutput(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    synergy_evaluation: str = ""
     action: str
     indices: list[int] = Field(default_factory=list)
     deck: str = ""
@@ -357,15 +360,26 @@ def _safe_int(value, default: int = 0) -> int:
 
 def _get_state_cards(raw_state: dict, container_name: str) -> list[dict]:
     """Safely read a card-array container from raw_state."""
-    container = raw_state.get(container_name) or {}
-    if not isinstance(container, dict):
-        return []
+    # Balatro RPC payloads may use either "consumeables" (canonical API spelling)
+    # or "consumables" depending on source/version. Accept both.
+    candidate_names = [container_name]
+    if container_name == "consumeables":
+        candidate_names.append("consumables")
+    elif container_name == "consumables":
+        candidate_names.append("consumeables")
 
-    cards = container.get("cards", [])
-    if not isinstance(cards, list):
-        return []
+    for name in candidate_names:
+        container = raw_state.get(name) or {}
+        if not isinstance(container, dict):
+            continue
 
-    return [card for card in cards if isinstance(card, dict)]
+        cards = container.get("cards", [])
+        if not isinstance(cards, list):
+            continue
+
+        return [card for card in cards if isinstance(card, dict)]
+
+    return []
 
 
 def _format_card_short(card: dict) -> str:
@@ -717,6 +731,7 @@ def _call_planner(planner_context: str) -> dict:
     Falls back to {"action": "continue", ...} on any parse failure.
     """
     _DEFAULT = PlannerOutput(
+        synergy_evaluation="",
         action="continue",
         indices=[],
         deck="",
@@ -748,6 +763,7 @@ def _call_planner(planner_context: str) -> dict:
         log_system(
             f"[Planner] action={parsed['action']!r} "
             f"indices={parsed['indices']} "
+            f"synergy={parsed['synergy_evaluation'][:80]} "
             f"reasoning={parsed['reasoning'][:80]}"
         )
         return parsed
@@ -1048,7 +1064,7 @@ class BalatroSession:
                         guided_options_str += "***************************\n"
 
                 # --- Handle consumables options (global across all states) ---
-                consumables = raw_state.get("consumables", {}).get("cards", [])
+                consumables = _get_state_cards(raw_state, "consumeables")
                 if consumables:
                     deck_name = self.run_profile.get("deck", "") if self.run_profile else ""
                     cons_options = BalatroAlgorithm.evaluate_consumable_plays(
@@ -1140,6 +1156,7 @@ class BalatroSession:
                         avatar=self.avatar,
                         check_watchdog=False,
                     )
+                    self._last_filler_time = _now
 
                 # --- Step 3: Call silent Planner ---
                 planner = _call_planner(planner_context)

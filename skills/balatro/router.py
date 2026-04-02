@@ -110,6 +110,7 @@ class PhaseRouter:
             _get_state_cards,
             _summarize_shop_item,
             _format_shop_item_summary,
+            _safe_int,
             EARLY_GAME_ANTE_LIMIT,
             EARLY_GAME_INTEREST_RESERVE,
         )
@@ -129,6 +130,23 @@ class PhaseRouter:
         else:
             log_system("[Balatro] Shop inventory: (empty)")
         has_survival_joker = _has_survival_joker(raw_state)
+
+        pack_cards = _get_state_cards(raw_state, "packs")
+        voucher_cards = _get_state_cards(raw_state, "vouchers")
+        consumable_cards = _get_state_cards(raw_state, "consumeables")
+        money = _safe_int(raw_state.get("money"), 0)
+        round_info = raw_state.get("round") or {}
+        reroll_cost = (
+            _safe_int(round_info.get("reroll_cost"), 0)
+            if isinstance(round_info, dict)
+            else 0
+        )
+        can_reroll = reroll_cost > 0 and money >= reroll_cost
+
+        can_buy_shop = bool(shop_cards)
+        can_buy_pack = bool(pack_cards)
+        can_buy_voucher = bool(voucher_cards)
+        can_use_consumable = bool(consumable_cards)
 
         if ante <= EARLY_GAME_ANTE_LIMIT and not has_survival_joker:
             guidance = (
@@ -166,16 +184,61 @@ class PhaseRouter:
                 "To reroll the shop, use action 'reroll'."
             )
 
+        availability_rules: list[str] = []
+        if not can_buy_shop:
+            availability_rules.append("No shop cards available. Do NOT output buy_shop.")
+        if not can_buy_pack:
+            availability_rules.append("No packs available. Do NOT output buy_pack.")
+        if not can_buy_voucher:
+            availability_rules.append(
+                "No voucher available. Do NOT output buy_voucher."
+            )
+        if not can_reroll:
+            availability_rules.append(
+                f"Reroll unavailable or unaffordable (money=${money}, reroll_cost=${reroll_cost}). Do NOT output reroll."
+            )
+
+        no_shop_progression_action = not any(
+            [can_buy_shop, can_buy_pack, can_buy_voucher, can_reroll, can_use_consumable]
+        )
+        if no_shop_progression_action:
+            availability_rules.append(
+                "No valid shop action besides continue is available. Output action='continue' with empty indices."
+            )
+
+        if availability_rules:
+            guidance = guidance + " " + " ".join(availability_rules)
+
+        guidance = (
+            guidance
+            + " SHOP DECISION RULE: Before selecting any shop action, populate the output field 'synergy_evaluation' by comparing each candidate Joker/shop card value.effect against your currently owned Joker value.effect text and current build direction (chips vs mult vs xmult, hand-type conditions). Then pick action/indices based on that fit analysis."
+        )
+
+        allowed_actions = ["continue"]
+        if can_buy_shop:
+            allowed_actions.append("buy_shop")
+        if can_buy_pack:
+            allowed_actions.append("buy_pack")
+        if can_buy_voucher:
+            allowed_actions.append("buy_voucher")
+        if can_reroll:
+            allowed_actions.append("reroll")
+        if can_use_consumable:
+            allowed_actions.append("use_consumable")
+
+        utility_actions = [
+            "sell_joker",
+            "sell_consumable",
+            "rearrange_joker",
+            "rearrange_consumable",
+        ]
+        if can_use_consumable:
+            utility_actions.append("use_consumable")
+
         return PhaseDirective(
             phase_id="shop",
-            allowed_actions=[
-                "buy_shop",
-                "buy_pack",
-                "buy_voucher",
-                "reroll",
-                "continue",
-                "use_consumable",
-            ],
+            allowed_actions=allowed_actions,
+            utility_actions=utility_actions,
             guidance=guidance,
         )
 

@@ -45,15 +45,24 @@ class BalatroAlgorithm:
         if not isinstance(raw_state, dict):
             return []
 
-        container = raw_state.get(container_name) or {}
-        if not isinstance(container, dict):
-            return []
+        candidate_names = [container_name]
+        if container_name == "consumeables":
+            candidate_names.append("consumables")
+        elif container_name == "consumables":
+            candidate_names.append("consumeables")
 
-        cards = container.get("cards", [])
-        if not isinstance(cards, list):
-            return []
+        for name in candidate_names:
+            container = raw_state.get(name) or {}
+            if not isinstance(container, dict):
+                continue
 
-        return [card for card in cards if isinstance(card, dict)]
+            cards = container.get("cards", [])
+            if not isinstance(cards, list):
+                continue
+
+            return [card for card in cards if isinstance(card, dict)]
+
+        return []
 
     @staticmethod
     def _card_enhancement(card: Dict[str, Any]) -> str:
@@ -939,7 +948,7 @@ class BalatroAlgorithm:
         deck_upper = deck_name.upper() if deck_name else ""
 
         if not consumables:
-            return options
+            return []
 
         # Map ranks to values to find high/low cards for targets
         indexed_hand = []
@@ -952,6 +961,7 @@ class BalatroAlgorithm:
 
         for c_idx, consumable in enumerate(consumables, start=1):
             name = (consumable.get("label") or "").lower()
+            key = (consumable.get("key") or "").lower()
 
             # Consumables (No targets needed)
             no_target_names = [
@@ -974,30 +984,30 @@ class BalatroAlgorithm:
                 "planet x",
                 "ceres",
                 "eris",
+                "aura",
+                "wraith",
+                "ouija",
+                "ectoplasm",
+                "familiar",
+                "incantation",
+                "talisman",
+                "seance",
+                "immolate",
+                "ankh",
+                "cryptid",
+                "grim",
             ]
-            if any(nt in name for nt in no_target_names):
+            
+            is_planet = any(nt in name for nt in ["pluto", "mercury", "uranus", "venus", "saturn", " earth", "mars", "neptune", "planet x", "ceres", "eris", "jupiter"]) or "planet" in key or key.startswith("c_planet") or name.startswith("planet")
+
+            if any(nt in name for nt in no_target_names) or is_planet:
                 priority = 60.0
                 reasoning = f"Use {name.capitalize()} for immediate value."
 
                 if "jupiter" in name and deck_upper == "CHECKERED":
                     priority = 95.0
                     reasoning = "Use Jupiter now to level Flush for Checkered consistency."
-                elif any(
-                    planet in name
-                    for planet in [
-                        "pluto",
-                        "mercury",
-                        "uranus",
-                        "venus",
-                        "saturn",
-                        "earth",
-                        "mars",
-                        "neptune",
-                        "planet x",
-                        "ceres",
-                        "eris",
-                    ]
-                ):
+                elif is_planet:
                     priority = 72.0
                     reasoning = f"Use {name.capitalize()} to scale hand levels."
                 elif any(econ in name for econ in ["hermit", "temperance", "fool"]):
@@ -1018,6 +1028,7 @@ class BalatroAlgorithm:
             if not indexed_hand:
                 continue
 
+            # Death splits: target lowest to copy highest
             if "death" in name and len(indexed_hand) >= 2:
                 lowest_idx = indexed_hand[0][0]
                 highest_idx = indexed_hand[-1][0]
@@ -1030,25 +1041,54 @@ class BalatroAlgorithm:
                     }
                 )
 
-            elif "strength" in name and len(indexed_hand) >= 1:
-                targets = [card[0] for card in indexed_hand[:2]]
-                scored_options.append(
-                    {
-                        "priority": 66.0,
-                        "action": "use_consumable",
-                        "indices": [c_idx] + targets,
-                        "reasoning": f"Use Strength to upgrade lowest cards: {targets}.",
-                    }
-                )
-
-            elif "hanged man" in name and len(indexed_hand) >= 1:
-                targets = [card[0] for card in indexed_hand[:2]]
+            # Destructors (Hanged Man, Tower): target lowest cards
+            elif any(x in name for x in ["hanged man", "tower"]) and len(indexed_hand) >= 1:
+                target_count = 2 if "hanged man" in name else 1
+                targets = [card[0] for card in indexed_hand[:target_count]]
                 scored_options.append(
                     {
                         "priority": 64.0,
                         "action": "use_consumable",
                         "indices": [c_idx] + targets,
-                        "reasoning": f"Use Hanged Man to destroy lowest value cards: {targets}.",
+                        "reasoning": f"Use {name.capitalize()} to destroy lowest cards: {targets}.",
+                    }
+                )
+
+            # Modifiers/Spectrals that destroy (Hex): target lowest card for positive value
+            elif "hex" in name and len(indexed_hand) >= 1:
+                targets = [indexed_hand[0][0]]
+                scored_options.append(
+                    {
+                        "priority": 70.0,
+                        "action": "use_consumable",
+                        "indices": [c_idx] + targets,
+                        "reasoning": f"Use {name.capitalize()} on lowest card ({targets[0]}) to gain Polychrome.",
+                    }
+                )
+
+            # Enhancers (Strength, Empress, Hierophant, Justice, Magician, Devil): target highest cards
+            elif any(x in name for x in ["strength", "empress", "hierophant", "justice", "magician", "devil"]) and len(indexed_hand) >= 1:
+                target_count = 1 if name in ["justice", "devil"] else 2
+                targets = [card[0] for card in indexed_hand[-target_count:]]
+                scored_options.append(
+                    {
+                        "priority": 66.0,
+                        "action": "use_consumable",
+                        "indices": [c_idx] + targets,
+                        "reasoning": f"Use {name.capitalize()} to enhance your best cards: {targets}.",
+                    }
+                )
+
+            # Suit changers / Misc (Sun, Moon, Star, World, Lovers): target highest cards
+            elif any(x in name for x in ["sun", "moon", "star", "world", "lovers"]) and len(indexed_hand) >= 1:
+                target_count = 3 if name in ["sun", "moon", "star", "world"] else 2
+                targets = [card[0] for card in indexed_hand[-target_count:]]
+                scored_options.append(
+                    {
+                        "priority": 65.0,
+                        "action": "use_consumable",
+                        "indices": [c_idx] + targets,
+                        "reasoning": f"Use {name.capitalize()} on best cards to convert suits: {targets}.",
                     }
                 )
 

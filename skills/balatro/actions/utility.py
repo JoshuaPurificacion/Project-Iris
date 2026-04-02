@@ -30,6 +30,17 @@ def _card_modifier_enhancement(card: dict) -> str | None:
     return None
 
 
+def _get_consumable_cards(raw_state: dict) -> list[dict]:
+    """Return consumables from either known payload spelling."""
+    for key in ("consumeables", "consumables"):
+        container = raw_state.get(key, {})
+        if isinstance(container, dict):
+            cards = container.get("cards", [])
+            if isinstance(cards, list):
+                return cards
+    return []
+
+
 class SellJokerAction(BaseAction):
     """Execute sell_joker action."""
 
@@ -157,7 +168,7 @@ class SellConsumableAction(BaseAction):
 
         # Check bounds
         raw_state = ctx.tick_context.raw_state
-        consumables = raw_state.get("consumables", {}).get("cards", [])
+        consumables = _get_consumable_cards(raw_state)
         if not (0 <= idx < len(consumables)):
             error = f"sell_consumable index {args[0]} is out of bounds for {len(consumables)} consumables."
             self._log_error(ctx, error)
@@ -167,7 +178,7 @@ class SellConsumableAction(BaseAction):
         log_system(
             f"[Balatro] Selling consumable at 0-based index {idx} (LLM said {args[0]})."
         )
-        sold = ctx.controller.client.sell(idx, "consumables")
+        sold = ctx.controller.client.sell(idx, "consumeables")
 
         if sold:
             self._log_success(ctx, f"sold consumable at index {args[0]}")
@@ -208,7 +219,7 @@ class UseConsumableAction(BaseAction):
 
         # Check bounds
         raw_state = ctx.tick_context.raw_state
-        consumables = raw_state.get("consumables", {}).get("cards", [])
+        consumables = _get_consumable_cards(raw_state)
         if not (0 <= idx < len(consumables)):
             error = f"use_consumable index {args[0]} is out of bounds for {len(consumables)} consumables."
             self._log_error(ctx, error)
@@ -390,7 +401,7 @@ class RearrangeConsumableAction(BaseAction):
 
         # Check bounds
         raw_state = ctx.tick_context.raw_state
-        consumables = raw_state.get("consumables", {}).get("cards", [])
+        consumables = _get_consumable_cards(raw_state)
         if not (0 <= from_idx < len(consumables)) or not (
             0 <= to_idx < len(consumables)
         ):
@@ -406,7 +417,7 @@ class RearrangeConsumableAction(BaseAction):
 
         # Execute rearrange
         log_system(f"[Balatro] Moving consumable from {from_idx} to {to_idx}.")
-        moved = ctx.controller.client.rearrange(from_idx, to_idx, "consumables")
+        moved = ctx.controller.client.rearrange(from_idx, to_idx, "consumeables")
 
         if moved:
             self._log_success(ctx, f"rearranged consumable {args[0]} -> {args[1]}")

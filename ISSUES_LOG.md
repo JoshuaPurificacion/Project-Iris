@@ -96,3 +96,27 @@ Fixed: Added is_speaking flag to block listening while TTS is playing.
 |----------|---------|---------|
 | `MIC_INDEX` | None (OS default) | Override if Windows reassigns audio device |
 | `AEC_MULTIPLIER` | 2.0 | Tune threshold for ambient noise |
+
+---
+
+## Session Date: April 2, 2026 (Balatro Stability + Shop Reasoning)
+
+### [RESOLVED] Shop Planner Could Choose Unavailable Actions
+**Problem:** During shop phase, planner could still choose actions that were unavailable (empty shop/packs/vouchers or unaffordable reroll).
+**Solution:** Added dynamic availability constraints in routing and prompt context so unavailable actions are explicitly blocked and `continue` is required when no progression action exists.
+- Files: `skills/balatro/router.py`, `skills/balatro/prompt_builder.py`, `tests/test_balatro_router_prompt.py`
+
+### [RESOLVED] Missing Explicit Joker Fit Reasoning Before Buy Decision
+**Problem:** Planner could decide buys without first writing a concrete Joker/build synergy evaluation from live `value.effect` text.
+**Solution:** Added top-level `synergy_evaluation` field to planner schema and prompt contract, and enforced shop guidance that compares candidate `value.effect` against owned Joker effects before choosing `action`/`indices`.
+- Files: `skills/balatro/session.py`, `skills/balatro/router.py`, `tests/test_balatro_router_prompt.py`, `tests/test_balatro_session.py`
+
+### [RESOLVED] Consumable Container Spelling Drift (`consumables` vs `consumeables`)
+**Problem:** Different API payloads used different container spellings, causing indexing failures in sell/use/rearrange flows.
+**Solution:** Added dual-spelling lookup helpers and normalized consumable action handlers and state readers to accept both variants.
+- Files: `skills/balatro/actions/utility.py`, `skills/balatro/session.py`, `skills/balatro_bot/modules/algorithms.py`, `skills/balatro/prompt_builder.py`
+
+### [RESOLVED] No Dedicated Snapshot for Owned/Shop Joker Effect Inspection
+**Problem:** Needed a quick reproducible way to inspect current owned Jokers and shop Jokers with raw effect text.
+**Solution:** Added `scripts/inspect_jokers.py` to dump current owned/shop joker arrays into `scripts/test_api_jokers.txt` for prompt/debug verification.
+- Files: `scripts/inspect_jokers.py`, `scripts/test_api_jokers.txt`

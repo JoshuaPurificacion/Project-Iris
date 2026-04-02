@@ -124,3 +124,48 @@ The final system is fully offline-capable, uses deterministic texture analysis i
 *Date: March 25, 2026*
 *Project: OmniSense / Project Iris*
 *Exhibit: Arduin-o-vation - University of the East, Manila*
+
+---
+
+## Session Date: April 2, 2026
+
+### Focus: Balatro Shop Reliability + Joker Synergy Evaluation
+
+### Key Outcomes
+
+1. Added explicit planner-first shop reasoning via a new `synergy_evaluation` field in the Balatro planner output schema.
+2. Updated shop directives to require comparing candidate Joker `value.effect` text against currently owned Joker effects before selecting `action`.
+3. Added strict shop availability constraints so planner avoids invalid actions when shop, pack, or voucher inventories are empty or reroll is unaffordable.
+4. Improved consumable compatibility by supporting both payload spellings: `consumeables` and `consumables`.
+5. Added a reproducible state inspection utility to capture owned and shop jokers into a txt snapshot for debugging and prompt validation.
+
+### Tests Added/Validated
+
+- `tests/test_balatro_router_prompt.py`
+	- Verifies unavailable shop actions are blocked.
+	- Verifies `synergy_evaluation` requirement appears in shop guidance.
+	- Verifies planner prompt places `synergy_evaluation` before `action`.
+	- Verifies real Joker `value.effect` text appears in planner context.
+
+- `tests/test_balatro_session.py`
+	- Verifies `PlannerOutput` accepts `synergy_evaluation`.
+	- Verifies backward compatibility when `synergy_evaluation` is omitted.
+
+- `tests/test_balatro_algorithms.py`
+	- Verifies consumable evaluation stability with empty input.
+	- Verifies target selection logic for enhancer/destructor consumables.
+
+### Files Updated This Session
+
+- `skills/balatro/session.py`
+- `skills/balatro/router.py`
+- `skills/balatro/prompt_builder.py`
+- `skills/balatro/actions/utility.py`
+- `skills/balatro_bot/modules/algorithms.py`
+- `tests/test_balatro_router_prompt.py`
+- `tests/test_balatro_session.py`
+- `tests/test_balatro_algorithms.py`
+- `scripts/inspect_jokers.py`
+- `scripts/test_api_jokers.txt`
+- `ISSUES_LOG.md`
+- `DEVELOPMENT_LOG.md`

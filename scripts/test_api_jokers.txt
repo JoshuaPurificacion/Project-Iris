@@ -1,0 +1,57 @@
+Balatro State Inspection
+game_state=SHOP
+
+=== JOKERS (CURRENTLY OWNED) ===
+[
+  {
+    "id": 1239,
+    "state": [],
+    "label": "Scary Face",
+    "set": "JOKER",
+    "modifier": {
+      "enhancement": "SCARY FACES"
+    },
+    "value": {
+      "effect": "Played face cards give +30 Chips when scored"
+    },
+    "key": "j_scary_face",
+    "cost": {
+      "buy": 4,
+      "sell": 2
+    }
+  }
+]
+
+=== SHOP (AVAILABLE TO BUY) ===
+[
+  {
+    "id": 1234,
+    "state": [],
+    "label": "Red Card",
+    "set": "JOKER",
+    "modifier": [],
+    "value": {
+      "effect": "This Joker gains +3 Mult when any Booster Pack is skipped (Currently +0 Mult)"
+    },
+    "key": "j_red_card",
+    "cost": {
+      "buy": 5,
+      "sell": 2
+    }
+  },
+  {
+    "id": 1235,
+    "state": [],
+    "label": "Wily Joker",
+    "set": "JOKER",
+    "modifier": [],
+    "value": {
+      "effect": "+100 Chips if played hand contains a Three of a Kind"
+    },
+    "key": "j_wily",
+    "cost": {
+      "buy": 4,
+      "sell": 2
+    }
+  }
+]

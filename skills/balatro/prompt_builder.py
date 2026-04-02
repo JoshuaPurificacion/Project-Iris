@@ -60,9 +60,6 @@ class PlannerContextBuilder:
         deck_block = (
             self._build_deck_selection_block() if "MENU" in current_state else ""
         )
-        deck_block = (
-            self._build_deck_selection_block() if "MENU" in current_state else ""
-        )
 
         # Build desperate mode block (lethal myopia)
         desperate_block = self._build_desperate_mode(tick_context)
@@ -88,13 +85,68 @@ class PlannerContextBuilder:
                 "- Do not use consumables, sell, or rearrange actions in this state.\n\n"
             )
         elif "shop" in current_state_lower:
+            def _state_cards(container_name: str) -> list:
+                candidates = [container_name]
+                if container_name == "consumeables":
+                    candidates.append("consumables")
+                elif container_name == "consumables":
+                    candidates.append("consumeables")
+
+                for name in candidates:
+                    container = raw_state.get(name, {})
+                    if not isinstance(container, dict):
+                        continue
+                    cards = container.get("cards", [])
+                    if isinstance(cards, list):
+                        return cards
+                return []
+
+            def _safe_int(value, default: int = 0) -> int:
+                try:
+                    return int(value)
+                except (TypeError, ValueError):
+                    return default
+
+            shop_cards = _state_cards("shop")
+            pack_cards = _state_cards("packs")
+            voucher_cards = _state_cards("vouchers")
+            consumable_cards = _state_cards("consumeables")
+            money = _safe_int(raw_state.get("money"), 0)
+            round_info = raw_state.get("round", {})
+            reroll_cost = (
+                _safe_int(round_info.get("reroll_cost"), 0)
+                if isinstance(round_info, dict)
+                else 0
+            )
+            can_reroll = reroll_cost > 0 and money >= reroll_cost
+
             state_constraints = (
                 "STATE CONSTRAINTS:\n"
                 "- In shop, only non-targeted consumables are valid to use.\n"
                 "- Do not use targeted consumables that require selecting hand cards.\n\n"
                 "- Use surplus money above reserve to improve board strength (joker upgrades, packs, vouchers, rerolls).\n"
                 "- If joker slots are full, prefer selling low-impact jokers before buying a stronger joker.\n\n"
+                f"- Availability snapshot: shop_cards={len(shop_cards)}, packs={len(pack_cards)}, vouchers={len(voucher_cards)}, consumables={len(consumable_cards)}, money=${money}, reroll_cost=${reroll_cost}.\n"
             )
+
+            if not shop_cards:
+                state_constraints += "- shop.cards is empty. Do NOT output buy_shop.\n"
+            if not pack_cards:
+                state_constraints += "- packs.cards is empty. Do NOT output buy_pack.\n"
+            if not voucher_cards:
+                state_constraints += "- vouchers.cards is empty. Do NOT output buy_voucher.\n"
+            if not can_reroll:
+                state_constraints += "- Reroll is unavailable or unaffordable. Do NOT output reroll.\n"
+
+            if not any(
+                [shop_cards, pack_cards, voucher_cards, consumable_cards, can_reroll]
+            ):
+                state_constraints += (
+                    "- No valid shop action besides continue exists. "
+                    "Output action='continue' with indices=[].\n"
+                )
+
+            state_constraints += "\n"
 
         # Build final context
         context = (

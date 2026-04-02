@@ -169,6 +169,56 @@ class TestBalatroAlgorithms(unittest.TestCase):
         self.assertEqual(options[0]["indices"], [2])
         self.assertIn("Jupiter", options[0]["reasoning"])
 
+    def test_evaluate_consumable_empty_list_does_not_crash(self):
+        options = BalatroAlgorithm.evaluate_consumable_plays(
+            consumables=[],
+            hand_cards=[],
+            deck_name="CHECKERED",
+        )
+        self.assertEqual(options, [])
+
+    def test_evaluate_consumable_plays_enhancer_targets_highest(self):
+        hand = [
+            _card("2", "Spades"),
+            _card("3", "Spades"),
+            _card("K", "Spades"),
+            _card("Q", "Spades"),
+            _card("A", "Hearts"),
+        ]
+        consumables = [
+            {"label": "Empress", "key": "c_empress", "value": {"effect": "Enhances 2 selected cards"}},
+        ]
+        options = BalatroAlgorithm.evaluate_consumable_plays(
+            consumables=consumables,
+            hand_cards=hand,
+            deck_name="CHECKERED",
+        )
+        self.assertTrue(options)
+        target_indices = set(options[0]["indices"][1:])
+        self.assertEqual(target_indices, {3, 5})
+        self.assertIn("Empress", options[0]["reasoning"])
+
+    def test_evaluate_consumable_plays_destructor_targets_lowest(self):
+        hand = [
+            _card("A", "Spades"),
+            _card("K", "Spades"),
+            _card("Q", "Spades"),
+            _card("8", "Hearts"),
+            _card("3", "Hearts"),
+        ]
+        consumables = [
+            {"label": "Hanged Man", "key": "c_hanged_man", "value": {"effect": "Destroys 2 selected cards"}},
+        ]
+        options = BalatroAlgorithm.evaluate_consumable_plays(
+            consumables=consumables,
+            hand_cards=hand,
+            deck_name="CHECKERED",
+        )
+        self.assertTrue(options)
+        target_indices = set(options[0]["indices"][1:])
+        self.assertEqual(target_indices, {4, 5})
+        self.assertIn("Hanged man", options[0]["reasoning"])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
