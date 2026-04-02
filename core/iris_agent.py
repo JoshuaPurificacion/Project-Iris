@@ -21,7 +21,7 @@ MODES = {
     "balatro": balatro_mode,
 }
 
-LLM_MODEL = "qwen2.5:latest"
+LLM_MODEL = "llama3.1:latest"
 
 IDLE_TIMEOUT_SECONDS = 45
 HISTORY_WINDOW_USER_TURNS = 10
@@ -248,7 +248,7 @@ class Iris:
                     msg = "Time to gamble! Let's hit some high scores in Balatro!"
                 else:
                     msg = "Switching to Exhibit Mode. Let's show off this hardware!"
-                self.vm.speak(msg, avatar=avatar)
+                self.vm.speak(msg, avatar=avatar, check_watchdog=False)
 
     def idle_loop(self, avatar=None):
         while True:
@@ -364,7 +364,9 @@ class Iris:
                     if clean_text:  # Skip empty strings after markdown stripping
                         if avatar is not None:
                             avatar.show_speaking()
-                        self.vm.speak(clean_text, avatar=avatar)
+                            self.vm.speak(
+                                clean_text, avatar=avatar, check_watchdog=False
+                            )
                 buffer = ""
 
         # Flush any trailing text that didn't end with punctuation
@@ -373,7 +375,7 @@ class Iris:
             if clean_text:  # Skip empty strings after markdown stripping
                 if avatar is not None:
                     avatar.show_speaking()
-                self.vm.speak(clean_text, avatar=avatar)
+                self.vm.speak(clean_text, avatar=avatar, check_watchdog=False)
 
         self.last_spoke_time = time.time()
 
@@ -429,7 +431,7 @@ class Iris:
             messages=self.messages,
             tools=tools,
             stream=True,
-            options={"num_gpu": 10, "temperature": 0.7},
+            options={"temperature": 0.35},
         )
 
         # Stream-speak sentence-by-sentence; collect any tool calls
@@ -617,7 +619,7 @@ class Iris:
                     messages=self.messages,
                     tools=tools,
                     stream=True,
-                    options={"num_gpu": 10, "temperature": 0.7},
+                    options={"temperature": 0.35},
                 )
                 content, _ = self._speak_streamed(followup_stream, avatar=avatar)
 

@@ -3,6 +3,7 @@ from PIL import Image, ImageTk
 import threading
 import time
 import random
+import re
 
 from core.logger import log_system
 
@@ -162,6 +163,9 @@ class AvatarWindow:
         # --- DETERMINISTIC IMAGE WATCHDOG (Loaded Dynamically) ---
         self.prototype_images = {}
         self.project_keywords = {}
+        self._last_watchdog_text = ""
+        self._last_watchdog_time = 0.0
+        self._watchdog_cooldown = 3.0
 
         self.current_state = "idle"
         self._caption_time = 0.0
@@ -261,6 +265,8 @@ class AvatarWindow:
         """Called by the core agent during a mode switch to update UI triggers."""
         self.prototype_images = images_dict
         self.project_keywords = keywords_dict
+        self._last_watchdog_text = ""
+        self._last_watchdog_time = 0.0
         log_system(
             f"[UI] Watchdog data refreshed. Active triggers: {len(self.project_keywords)}"
         )
@@ -269,19 +275,52 @@ class AvatarWindow:
     #  Caption + text input                                                #
     # ------------------------------------------------------------------ #
 
-    def show_caption(self, text):
-        """Display text in the caption bar and check for image triggers."""
-        log_system(f"[WATCHDOG] Received: {text[:60]}...")
+    def show_caption(self, text, check_watchdog=True):
+        """Display text in the caption bar and optionally run the watchdog."""
+        if self.current_mode.get() != "balatro":
+            log_system(f"[WATCHDOG] Received: {text[:60]}...")
         self._caption_time = time.time()
         self.window.after(0, lambda: self.caption_label.config(text=text))
 
-        # --- THE WATCHDOG INTERCEPT ---
-        lower_text = text.lower()
+        if not check_watchdog:
+            return
+
+        # Skip watchdog when triggers or images are absent
+        if not self.project_keywords or not self.prototype_images:
+            return
+
+        sanitized = self._sanitize_watchdog_text(text)
+        if not sanitized:
+            return
+
+        now = time.time()
+        if (
+            sanitized == self._last_watchdog_text
+            and (now - self._last_watchdog_time) < self._watchdog_cooldown
+        ):
+            return
+
+        self._last_watchdog_text = sanitized
+        self._last_watchdog_time = now
+
         for image_key, keywords in self.project_keywords.items():
-            if any(kw in lower_text for kw in keywords):
+            if not keywords:
+                continue
+
+            if isinstance(keywords, str):
+                keywords = [keywords]
+
+            if any((kw or "").lower() in sanitized for kw in keywords):
                 log_system(f"[WATCHDOG] TRIGGER MATCH! Opening '{image_key}'")
                 self.window.after(0, lambda k=image_key: self.show_prototype(k))
                 break
+
+    def _sanitize_watchdog_text(self, text: str) -> str:
+        cleaned = text or ""
+        cleaned = re.sub(r"\[.*?\]", " ", cleaned)  # remove bracketed tags
+        cleaned = re.sub(r"[`*_#>|]", " ", cleaned)  # strip markdown markers
+        cleaned = re.sub(r"\s+", " ", cleaned)  # collapse whitespace
+        return cleaned.strip().lower()
 
     def clear_caption(self):
         """Clear text in the caption bar."""

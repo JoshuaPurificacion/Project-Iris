@@ -1,4 +1,5 @@
 import random
+import tkinter
 
 QUIZ_TOPICS = [
     "microprocessors",
@@ -23,6 +24,24 @@ The student answered: {answer}
 Evaluate if they are correct or close. 
 Respond naturally in Iris's voice — encouraging if right, give a hint if wrong.
 Keep it to 2-3 sentences. Track internally if correct."""
+
+def _schedule_emoji(avatar, emoji: str, color: str) -> None:
+    """Safely schedule a floating emoji on the avatar window.
+
+    Guards against a destroyed or None window — eliminates bare try/except
+    anti-patterns scattered across callback sites.
+    """
+    if avatar is None:
+        return
+    try:
+        win = avatar.window
+        if win.winfo_exists():
+            win.after(0, lambda: avatar.float_emoji(emoji, color))
+    except tkinter.TclError:
+        pass
+    except Exception:
+        pass
+
 
 class QuizSession:
     def __init__(self, avatar=None):
@@ -51,17 +70,9 @@ class QuizSession:
         eval_lower = evaluation.lower()
         if "correct" in eval_lower or "right" in eval_lower or "exactly" in eval_lower:
             self.score += 1
-            if self.avatar is not None:
-                try:
-                    self.avatar.window.after(0, lambda: self.avatar.float_emoji("✨", "#ffff00"))
-                except Exception:
-                    pass
+            _schedule_emoji(self.avatar, "✨", "#ffff00")
         else:
-            if self.avatar is not None:
-                try:
-                    self.avatar.window.after(0, lambda: self.avatar.float_emoji("💡", "#aaaaff"))
-                except Exception:
-                    pass
+            _schedule_emoji(self.avatar, "💡", "#aaaaff")
 
     def end(self, speak_fn):
         self.active = False

@@ -56,12 +56,7 @@ def rpg_game_loop(iris, avatar, game_window):
             prompt = rpg_skill.format_prompt(state)
             iris.chat(prompt, save=False, use_tools=False, avatar=avatar)
 
-            # Wait for the TTS queue to clear so she finishes her speech before returning control
-            while (
-                not iris.vm.speech_queue.empty() or iris.vm.is_speaking.is_set()
-            ) and _rpg_running:
-                time.sleep(0.5)
-
+            # No longer wait for TTS queue to clear; allow UI/gameplay to proceed
             game_window.set_status("Game over. Do you want me to play again?")
             log_system("[RPG] Game over state reached. Waiting for user action.")
             break
@@ -79,12 +74,9 @@ def rpg_game_loop(iris, avatar, game_window):
         log_system(f"[RPG] Iris chose: {action}")
         game_window.set_status(f"Iris chose: {action}")
 
-        # Let Iris finish speaking before applying the move to keep UI and audio in sync
+
+        # No longer wait for TTS queue to clear; apply move immediately for responsiveness
         game_window.set_status("Waiting for Iris to move...")
-        while (
-            not iris.vm.speech_queue.empty() or iris.vm.is_speaking.is_set()
-        ) and _rpg_running:
-            time.sleep(0.5)
 
         if not _rpg_running:
             log_system("[RPG] Stop requested before executing action; exiting loop.")
@@ -107,14 +99,17 @@ def rpg_game_loop(iris, avatar, game_window):
 def handle_game_action(action, iris, avatar, game_window):
     global _rpg_running, _rpg_game
 
+    log_system(f"[Mode] Game action received: {action!r}")
+
     if action == "stop_game":
         with _rpg_lock:
             if _rpg_running:
                 _rpg_running = False
                 _rpg_game = None
         balatro_skill.stop_balatro()
+        log_system("[Mode] Switching to default — all games stopped.")
         iris.switch_mode("default", avatar=avatar)
-        if game_window:
+        if game_window and game_window.winfo_exists():
             game_window.hide()
         # Shift her out of the dungeon persona so she can reflect casually
         iris.chat(
@@ -128,11 +123,15 @@ def handle_game_action(action, iris, avatar, game_window):
         with _rpg_lock:
             # If a game is running AND it's not over, block it
             if _rpg_running and _rpg_game and not _rpg_game.is_over():
+                log_system("[Mode] start_micro_rpg blocked — RPG already running.")
                 iris.vm.speak(
-                    "A game is already running. Stop it first.", avatar=avatar
+                    "A game is already running. Stop it first.",
+                    avatar=avatar,
+                    check_watchdog=False,
                 )
                 return
             _rpg_running = True
+        log_system("[Mode] Switching to iris_rpg.")
         iris.switch_mode("iris_rpg", avatar=avatar)
         threading.Thread(
             target=rpg_game_loop, args=(iris, avatar, game_window), daemon=True
@@ -141,11 +140,15 @@ def handle_game_action(action, iris, avatar, game_window):
     elif action == "start_balatro":
         with _rpg_lock:
             if _rpg_running and _rpg_game and not _rpg_game.is_over():
+                log_system("[Mode] start_balatro blocked — RPG already running.")
                 iris.vm.speak(
-                    "I'm already playing something. Stop it first.", avatar=avatar
+                    "I'm already playing something. Stop it first.",
+                    avatar=avatar,
+                    check_watchdog=False,
                 )
                 return
-        # Start balatro
+        # Idempotent guard: balatro_skill.start_balatro() handles double-start internally
+        log_system("[Mode] Switching to balatro.")
         balatro_skill.start_balatro(iris, avatar)
 
 
@@ -158,6 +161,12 @@ def handle_input(text, iris, avatar, game_window=None):
             iris.vm.interrupt_playback(avatar=avatar, reason="new_input")
         except Exception as e:
             log_system(f"Flush failed: {e}")
+
+    if avatar is not None:
+        try:
+            avatar.show_caption(text, check_watchdog=True)
+        except Exception as e:
+            log_system(f"Caption display failed: {e}")
     text_lower = text.lower()
 
     # Check stop quiz first

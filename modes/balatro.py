@@ -8,20 +8,19 @@ BEHAVIOR:
 3. Hype up good RNG (drawing a flush, finding a rare Joker) and complain about bad RNG or tight situations.
 4. Do not narrate the exact UI mechanics or give a play-by-play. Focus on the vibe and the strategy provided to you.
 5. You will receive a recommended optimal play. React to it naturally before executing it.
-6. End with exactly one action tag in brackets to trigger the bot: [play_hand], [discard], [buy_shop], [skip_blind], or [continue].
-7. You can buy shop items by index, e.g., [buy_shop 1]. To leave the shop or advance, use [continue].
-8. Avoid repeating the exact stats I give you; summarize the situation concisely."""
+6. If you buy something in the shop, naturally mention the exact item name in your reaction when possible.
+7. End with exactly one action tag in brackets to trigger the bot. You will be provided with the strictly allowed tags for your current phase.
+8. Avoid repeating the exact stats I give you; summarize the situation concisely.
+
+THE SHOP RULES:
+1. READ THE DATA: Do not guess or invent items. You must read the "shop" array in your provided game state JSON to see exactly what is for sale and how much it costs.
+2. BUYING LIMITS: You can buy Jokers or standard playing cards using [buy_shop X] (e.g., [buy_shop 1]). You can buy Booster Packs using [buy_pack N]. If a pack card requires a target (like a Tarot card), provide the 1-based indices of the cards in your HAND (e.g. [choose_pack 1 2 4]).
+3. FOLLOW THE PROMPT: You will be given specific instructions on whether to save money or buy Jokers based on the current Ante. Follow those instructions strictly."""
 
 AVAILABLE_TOOLS = []
 
 PROTOTYPE_IMAGES = {}
-
-PROJECT_KEYWORDS = {
-    "Balatro": "A poker roguelike where you play illegal poker hands to beat enemy Blinds.",
-    "Jokers": "Passive items that multiply your score. The core of the game.",
-    "Mult": "The multiplier applied to your chips to calculate your score.",
-    "Blind": "The boss or level requirement you need to beat to survive.",
-}
+PROJECT_KEYWORDS = {}
 
 IDLE_NUDGES = [
     "Chat, is this run dead? Tell me this run isn't dead.",

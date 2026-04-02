@@ -1,0 +1,182 @@
+Balatro State Inspection
+game_state=SELECTING_HAND
+
+=== CONSUMABLES ===
+[
+  {
+    "id": 82,
+    "state": [],
+    "label": "Strength",
+    "set": "TAROT",
+    "modifier": {
+      "enhancement": "ROUND BONUS"
+    },
+    "value": {
+      "effect": "Increases rank of up to 2 selected cards by 1"
+    },
+    "key": "c_strength",
+    "cost": {
+      "buy": 3,
+      "sell": 1
+    }
+  },
+  {
+    "id": 113,
+    "state": [],
+    "label": "The Magician",
+    "set": "TAROT",
+    "modifier": {
+      "enhancement": "ENHANCE"
+    },
+    "value": {
+      "effect": "Enhances 2 selected cards to Lucky Cards"
+    },
+    "key": "c_magician",
+    "cost": {
+      "buy": 3,
+      "sell": 1
+    }
+  }
+]
+
+=== HAND CARDS ===
+[
+  {
+    "id": 61,
+    "state": [],
+    "label": "Base Card",
+    "set": "DEFAULT",
+    "modifier": [],
+    "value": {
+      "rank": "9",
+      "effect": "+9 chips",
+      "suit": "S"
+    },
+    "key": "S_9",
+    "cost": {
+      "buy": 1,
+      "sell": 1
+    }
+  },
+  {
+    "id": 60,
+    "state": [],
+    "label": "Base Card",
+    "set": "DEFAULT",
+    "modifier": [],
+    "value": {
+      "rank": "8",
+      "effect": "+8 chips",
+      "suit": "S"
+    },
+    "key": "S_8",
+    "cost": {
+      "buy": 1,
+      "sell": 1
+    }
+  },
+  {
+    "id": 19,
+    "state": [],
+    "label": "Base Card",
+    "set": "DEFAULT",
+    "modifier": [],
+    "value": {
+      "rank": "6",
+      "effect": "+6 chips",
+      "suit": "S"
+    },
+    "key": "S_6",
+    "cost": {
+      "buy": 1,
+      "sell": 1
+    }
+  },
+  {
+    "id": 39,
+    "state": [],
+    "label": "Base Card",
+    "set": "DEFAULT",
+    "modifier": [],
+    "value": {
+      "rank": "Q",
+      "effect": "+10 chips",
+      "suit": "H"
+    },
+    "key": "H_Q",
+    "cost": {
+      "buy": 1,
+      "sell": 1
+    }
+  },
+  {
+    "id": 53,
+    "state": [],
+    "label": "Lucky Card",
+    "set": "ENHANCED",
+    "modifier": {
+      "enhancement": "LUCKY"
+    },
+    "value": {
+      "rank": "T",
+      "effect": "+10 chips 1 in 5 chance for +20 Mult 1 in 15 chance to win $20",
+      "suit": "H"
+    },
+    "key": "H_T",
+    "cost": {
+      "buy": 1,
+      "sell": 1
+    }
+  },
+  {
+    "id": 47,
+    "state": [],
+    "label": "Base Card",
+    "set": "DEFAULT",
+    "modifier": [],
+    "value": {
+      "rank": "8",
+      "effect": "+8 chips",
+      "suit": "H"
+    },
+    "key": "H_8",
+    "cost": {
+      "buy": 1,
+      "sell": 1
+    }
+  },
+  {
+    "id": 33,
+    "state": [],
+    "label": "Base Card",
+    "set": "DEFAULT",
+    "modifier": [],
+    "value": {
+      "rank": "7",
+      "effect": "+7 chips",
+      "suit": "H"
+    },
+    "key": "H_7",
+    "cost": {
+      "buy": 1,
+      "sell": 1
+    }
+  },
+  {
+    "id": 28,
+    "state": [],
+    "label": "Base Card",
+    "set": "DEFAULT",
+    "modifier": [],
+    "value": {
+      "rank": "2",
+      "effect": "+2 chips",
+      "suit": "H"
+    },
+    "key": "H_2",
+    "cost": {
+      "buy": 1,
+      "sell": 1
+    }
+  }
+]

@@ -23,6 +23,7 @@ Project Iris is a fully offline, locally-run AI VTuber built for a university en
 - 🐾 **Trigger Hardware** — Controls OmniSense ESP32-CAM pet feeder via HTTP
 - 📝 **Quiz** — Tests visitors on Computer Engineering topics with score tracking
 - 🎮 **Game** — Autonomous Micro RPG mode where Iris plays a custom dungeon crawler overlay
+- 🃏 **Balatro** — Plays the hit deckbuilder via JSON-RPC, making tactical hands and optimal shop/pack choices
 - 🎭 **Express** — Animated PNG avatar with state-based expressions and animations
 
 ---
@@ -156,6 +157,8 @@ setx CUDA_VISIBLE_DEVICES "0"
 | Stop a quiz | Say or type "stop quiz" |
 | Start RPG game | Say or type "start game" or "play rpg" |
 | Stop RPG game | Say or type "stop game" |
+| Start Balatro | Say or type "play balatro" (requires BalatroBot mod running) |
+| Stop Balatro | Say or type "stop balatro" |
 | Move avatar | Hold click 2 seconds then drag |
 | Bob avatar | Single click |
 
@@ -248,6 +251,7 @@ See [ISSUES_LOG.md](ISSUES_LOG.md) for a full history of bugs encountered and re
 
 ## 🙏 Credits
 
+- **BalatroBot** — wilsonthecat (for the Lua JSON-RPC API powering the Balatro integration)
 - **Kokoro-82M TTS** — hexgrad / thewh1teagle
 - **faster-whisper** — SYSTRAN
 - **Ollama** — Ollama team

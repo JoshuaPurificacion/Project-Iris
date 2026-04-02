@@ -5004,3 +5004,91 @@ Good luck!
 [22:16:14] 🤖 IRIS:  That’s an interesting thought! While OmniSense does use Canny Edge Detection for edge ratio calculation, it's more about analyzing the texture of objects rather than just selecting inputs. Keep thinking—it's all about making decisions based on visual data!
 
 Would you like to try another question?
+[22:36:46] ⚙️  SYSTEM: Loaded 21 prior turns from history_default.json.
+[22:36:46] ⚙️  SYSTEM: Loaded 20 prior turns from history_balatro.json.
+[22:36:46] ⚙️  SYSTEM: [Balatro] Game loop started.
+[22:36:46] ⚙️  SYSTEM: Runner active. Press Ctrl+C to terminate the session.
+[22:36:52] ⚙️  SYSTEM: Termination signal received. Shutting down...
+[22:37:26] ⚙️  SYSTEM: Loaded 21 prior turns from history_default.json.
+[22:37:26] ⚙️  SYSTEM: Loaded 20 prior turns from history_balatro.json.
+[22:37:26] ⚙️  SYSTEM: [Balatro] Game loop started.
+[22:37:26] ⚙️  SYSTEM: Runner active. Press Ctrl+C to terminate the session.
+[22:37:35] 🤖 IRIS:  Two Pair! Finally, a chance to show some strength. Let’s nail those pairs and see what the deck has in store for us!
+
+[play_hand]
+[22:37:35] ⚙️  SYSTEM: [Balatro] Executing action: play_hand with arg: None
+[22:37:35] ⚙️  SYSTEM: [Balatro] Lua rejected index 8. Blacklisting and retrying...
+[22:37:47] 🤖 IRIS:  Two Pair... feeling good, let's make sure we pair up strong and leave no stone unturned.
+
+[play_hand]
+[22:37:47] ⚙️  SYSTEM: [Balatro] Executing action: play_hand with arg: None
+[22:37:58] 🤖 IRIS:  Two Pair... alright, let’s go for those pairs and see if we can hit that sweet combo!
+
+[play_hand]
+[22:37:58] ⚙️  SYSTEM: [Balatro] Executing action: play_hand with arg: None
+[22:38:10] 🤖 IRIS:  Two Pair... yeah! Let's lock in those pairs and aim for a strong hand!
+
+[play_hand]
+[22:38:10] ⚙️  SYSTEM: [Balatro] Executing action: play_hand with arg: None
+[22:38:10] ⚙️  SYSTEM: [Balatro] Lua rejected index 8. Blacklisting and retrying...
+[22:39:43] 🤖 IRIS:  None... eh, might as well play it safe. Let’s just see if we can draw something useful.
+
+[continue]
+[22:39:43] ⚙️  SYSTEM: [Balatro] Executing action: continue with arg: None
+[22:39:56] 🤖 IRIS:  Flush... alright, let's go for that flush! We need to hit those suits right!
+
+[play_hand]
+[22:39:56] ⚙️  SYSTEM: [Balatro] Executing action: play_hand with arg: None
+[22:40:10] 🤖 IRIS:  None... okay, let’s focus on drawing something useful then.
+
+[continue]
+[22:40:10] ⚙️  SYSTEM: [Balatro] Executing action: continue with arg: None
+[22:40:19] 🤖 IRIS:  None... alright, time to draw and hope for a lucky break!
+
+[discard]
+[22:40:19] ⚙️  SYSTEM: [Balatro] Executing action: discard with arg: None
+[22:40:27] 🤖 IRIS:  Flush... feelin' it! Let’s try to complete that flush combo!
+
+[play_hand]
+[22:40:27] ⚙️  SYSTEM: [Balatro] Executing action: play_hand with arg: None
+[22:40:38] 🤖 IRIS:  Flush... yeah! We need those suits, let's make sure we hit that flush!
+
+[play_hand]
+[22:40:38] ⚙️  SYSTEM: [Balatro] Executing action: play_hand with arg: None
+[22:40:49] 🤖 IRIS:  Flush... on fire! Let’s go for that combo and see if the deck has our back.
+
+[play_hand]
+[22:40:49] ⚙️  SYSTEM: [Balatro] Executing action: play_hand with arg: None
+[22:41:01] 🤖 IRIS:  Flush... feeling lucky! Let's hit those suits hard and make this flush happen!
+
+[play_hand]
+[22:41:01] ⚙️  SYSTEM: [Balatro] Executing action: play_hand with arg: None
+[22:41:01] ⚙️  SYSTEM: [Balatro] Lua rejected index 8. Blacklisting and retrying...
+[22:41:11] 🤖 IRIS:  High Card... eh, might as well try to draw something better.
+
+[discard]
+[22:41:11] ⚙️  SYSTEM: [Balatro] Executing action: discard with arg: None
+[22:41:15] ⚙️  SYSTEM: Termination signal received. Shutting down...
+[22:49:59] ⚙️  SYSTEM: Loaded 21 prior turns from history_default.json.
+[22:49:59] ⚙️  SYSTEM: Loaded 20 prior turns from history_balatro.json.
+[22:49:59] ⚙️  SYSTEM: [Balatro] Game loop started.
+[22:49:59] ⚙️  SYSTEM: Runner active. Press Ctrl+C to terminate the session.
+[22:50:05] 🤖 IRIS:  Flush... yeah! We need that flush, let's go all in!
+
+[play_hand]
+[22:50:05] ⚙️  SYSTEM: [Balatro] Executing action: play_hand with arg: None
+[22:50:05] ⚙️  SYSTEM: [Balatro] Playing hand 1-based [1, 3, 5, 6, 7] -> 0-based [0, 2, 4, 5, 6] (hand size=8).
+[22:50:18] 🤖 IRIS:  Flush... on point! Let’s see if we can complete this combo and knock it out of the park!
+
+[play_hand]
+[22:50:18] ⚙️  SYSTEM: [Balatro] Executing action: play_hand with arg: None
+[22:50:18] ⚙️  SYSTEM: [Balatro] Playing hand 1-based [1, 3, 5, 6, 8] -> 0-based [0, 2, 4, 5, 7] (hand size=8).
+[22:50:32] 🤖 IRIS:  None... okay, let's just draw and hope for a bit of luck.
+
+[discard]
+[22:50:32] ⚙️  SYSTEM: [Balatro] Executing action: discard with arg: None
+[22:50:40] 🤖 IRIS:  None... alright, time to draw and maybe find something useful.
+
+[discard]
+[22:50:40] ⚙️  SYSTEM: [Balatro] Executing action: discard with arg: None
+[23:01:28] ⚙️  SYSTEM: Termination signal received. Shutting down...

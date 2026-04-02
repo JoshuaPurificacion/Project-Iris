@@ -75,15 +75,17 @@ class VoiceManager:
     def _speech_worker(self):
         """Processes the speech queue sequentially with zero thread overlap."""
         while True:
-            text, avatar = self.speech_queue.get()
-            log_system(f"Processing: {text[:40]}...")
-            self._execute_tts(text, avatar)
+            text, avatar, check_watchdog = self.speech_queue.get()
+            if not (avatar and avatar.current_mode.get() == "balatro"):
+                log_system(f"Processing: {text[:40]}...")
+            self._execute_tts(text, avatar, check_watchdog=check_watchdog)
             self.speech_queue.task_done()
 
-    def speak(self, text, avatar=None):
+    def speak(self, text, avatar=None, check_watchdog=False):
         """Adds text to the queue and logs the entry."""
-        log_system(f"Enqueued: {text[:40]}...")
-        self.speech_queue.put((text, avatar))
+        if not (avatar and avatar.current_mode.get() == "balatro"):
+            log_system(f"Enqueued: {text[:40]}...")
+        self.speech_queue.put((text, avatar, check_watchdog))
 
     def flush(self):
         """Stop all audio and clear pending speech queue."""
@@ -118,19 +120,20 @@ class VoiceManager:
         if avatar is not None:
             avatar.set_state("surprised")
             try:
-                avatar.show_caption("Pausing. I'm listening.")
+                avatar.show_caption("Pausing. I'm listening.", check_watchdog=False)
             except Exception:
                 pass
 
         log_system(f"🔇 Playback interrupted ({reason}).")
 
-    def _execute_tts(self, text, avatar=None):
+    def _execute_tts(self, text, avatar=None, check_watchdog=False):
         """Blocking TTS execution with sequential state cleanup."""
         if not text.strip():
             return
-        log_caption(text)
+        if not (avatar and avatar.current_mode.get() == "balatro"):
+            log_caption(text)
         if avatar:
-            avatar.show_caption(text)
+            avatar.show_caption(text, check_watchdog=check_watchdog)
 
         # Claim speaking state immediately so idle loop knows generation is in-flight
         self.is_speaking.set()
@@ -142,11 +145,20 @@ class VoiceManager:
                     f"Kokoro unavailable: {self.kokoro_error or 'not loaded'}"
                 )
 
-            log_system("TTS: Using Kokoro")
+            if not (avatar and avatar.current_mode.get() == "balatro"):
+                log_system("TTS: Using Kokoro")
             # Prepare Audio
             audio, sr = self.kokoro.create(
                 text, voice="af_sky", speed=0.9, lang="en-us"
             )
+            if audio is None or (isinstance(audio, np.ndarray) and audio.size == 0):
+                log_system(
+                    f"Kokoro returned empty audio for: '{text[:30]}...', skipping speech."
+                )
+                self.is_speaking.clear()
+                self.is_interruptible.clear()
+                return
+
             audio = librosa.effects.pitch_shift(
                 audio.astype(float), sr=sr, n_steps=VOICE_PITCH_STEPS
             )
@@ -194,39 +206,11 @@ class VoiceManager:
                     avatar.hide_prototype()
 
         except Exception as e:
-            log_system(f"TTS: Kokoro failed ({e}), using pyttsx3 fallback")
-            log_system(
-                "[TTS WARNING] Walkie-Talkie mode active: pyttsx3 voice interruptions disabled."
-            )
-            try:
-                if avatar:
-                    avatar.set_state("speaking")
-                self.is_speaking.set()
-                self.is_interruptible.set()
-
-                engine = pyttsx3.init()
-                engine.say(text)
-                engine.runAndWait()
-
-                self.is_speaking.clear()
-                self.is_interruptible.clear()
-                if avatar:
-                    if avatar.current_state != "surprised":
-                        avatar.set_state("idle")
-                    # Only hide prototype if no more sentences are queued (thread-safe)
-                    if self.speech_queue.empty() and hasattr(avatar, "hide_prototype"):
-                        avatar.hide_prototype()
-
-            except Exception as e2:
-                log_system(f"TTS: pyttsx3 also failed: {e2}")
-                self.is_speaking.clear()
-                self.is_interruptible.clear()
-                if avatar:
-                    avatar.set_state("idle")
-                    # Only hide prototype if no more sentences are queued (thread-safe)
-                    if self.speech_queue.empty() and hasattr(avatar, "hide_prototype"):
-                        avatar.hide_prototype()
-                print(f"[TTS FALLBACK] {text}")
+            log_system(f"TTS Generation failed: {e}. Skipping speech.")
+            self.is_speaking.clear()
+            self.is_interruptible.clear()
+            if avatar:
+                avatar.set_state("idle")
 
     def listen(self, avatar=None):
         """

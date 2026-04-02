@@ -321,12 +321,27 @@ class MicroRPG:
 
         # ── DEFEND ─────────────────────────────────────────
         elif action == "defend":
-            events.append("Iris raises her guard, bracing for the next hit.")
-            enemy_events, _ = self._resolve_enemy_attack(dmg_multiplier=0.5)
+            # Damage multiplier scales with DEF: base ~0.45 at DEF=1, floors at 0.25.
+            dmg_mult = max(0.25, 0.5 - self.player["def"] * 0.05)
+            events.append(
+                f"Iris raises her guard (blocking ~{int((1 - dmg_mult) * 100)}% of damage), "
+                f"then counter-strikes!"
+            )
+            enemy_events, _ = self._resolve_enemy_attack(dmg_multiplier=dmg_mult)
             events.extend(enemy_events)
             if self.player["hp"] <= 0:
                 self.status = "defeat"
                 events.append("Iris has fallen... GAME OVER.")
+            else:
+                # Guaranteed counter-strike at 40% ATK (no miss/crit, represents a parry)
+                counter_dmg = max(1, int(self._player_atk() * 0.4))
+                self.enemy["hp"] = max(0, self.enemy["hp"] - counter_dmg)
+                events.append(
+                    f"Iris retaliates with a parry counter for {counter_dmg} damage!"
+                )
+                if self.enemy["hp"] <= 0:
+                    kill_events = self._handle_kill()
+                    events.extend(kill_events)
 
         # ── FLEE ────────────────────────────────────────────
         elif action == "flee":

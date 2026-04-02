@@ -1,0 +1,86 @@
+Balatro API Fuzz Results
+consumable_idx=0  target_indices=[0, 1]
+game_state=SELECTING_HAND
+
+[FAIL] A1 — use {consumable, targets} — no select pre-call
+  → use({"consumable": 0, "targets": [0, 1]})
+    error: Consumable 'The Magician' requires card selection
+
+[FAIL] A2 — use {consumable} — baseline, no targets at all
+  → use({"consumable": 0})
+    error: Consumable 'The Magician' requires card selection
+
+[FAIL] B1 — toggle_highlight {cards:[...]} then use
+  → toggle_highlight({"cards": [0, 1]})
+    error: Unknown method: toggle_highlight
+  → use({"consumable": 0})
+    error: Consumable 'The Magician' requires card selection
+
+[FAIL] B2 — toggle_highlight {card:T} per card then use
+  → toggle_highlight({"card": 0})
+    error: Unknown method: toggle_highlight
+  → toggle_highlight({"card": 1})
+    error: Unknown method: toggle_highlight
+  → use({"consumable": 0})
+    error: Consumable 'The Magician' requires card selection
+
+[FAIL] C1 — highlight {cards:[...]} then use
+  → highlight({"cards": [0, 1]})
+    error: Unknown method: highlight
+  → use({"consumable": 0})
+    error: Consumable 'The Magician' requires card selection
+
+[FAIL] C2 — highlight {card:T} per card then use
+  → highlight({"card": 0})
+    error: Unknown method: highlight
+  → highlight({"card": 1})
+    error: Unknown method: highlight
+  → use({"consumable": 0})
+    error: Consumable 'The Magician' requires card selection
+
+[FAIL] D1 — select_cards {cards:[...]} then use
+  → select_cards({"cards": [0, 1]})
+    error: Unknown method: select_cards
+  → use({"consumable": 0})
+    error: Consumable 'The Magician' requires card selection
+
+[FAIL] D2 — select_cards {card:T} per card then use
+  → select_cards({"card": 0})
+    error: Unknown method: select_cards
+  → select_cards({"card": 1})
+    error: Unknown method: select_cards
+  → use({"consumable": 0})
+    error: Consumable 'The Magician' requires card selection
+
+[FAIL] E1 — select {targets:[...]} then use
+  → select({"targets": [0, 1]})
+    error: Method 'select' requires one of these states: BLIND_SELECT
+  → use({"consumable": 0})
+    error: Consumable 'The Magician' requires card selection
+
+[FAIL] E2 — select {hand:[...]} then use
+  → select({"hand": [0, 1]})
+    error: Method 'select' requires one of these states: BLIND_SELECT
+  → use({"consumable": 0})
+    error: Consumable 'The Magician' requires card selection
+
+[FAIL] E3 — select {card:T} per card then use
+  → select({"card": 0})
+    error: Method 'select' requires one of these states: BLIND_SELECT
+  → select({"card": 1})
+    error: Method 'select' requires one of these states: BLIND_SELECT
+  → use({"consumable": 0})
+    error: Consumable 'The Magician' requires card selection
+
+[FAIL] F1 — use {card:C, targets:[...]} — 'card' key instead of 'consumable'
+  → use({"card": 0, "targets": [0, 1]})
+    error: Missing required field 'consumable'
+
+[PASS] F2 — use {consumable:C, cards:[...]} — 'cards' key instead of 'targets'
+  → use({"consumable": 0, "cards": [0, 1]})
+    result: {"seed": "JNQ2SDL1", "ante_num": 3, "won": false, "deck": "CHECKERED", "shop": {"count": 1, "limit": 2, "cards": [], "highlighted_limit": 1}, "round": {"hands_left": 4, "reroll_cost": 5, "chips": 0, "
+
+[FAIL] F3 — use {consumable:C, selected:[...]} — 'selected' key
+  → use({"consumable": 0, "selected": [0, 1]})
+    error: Consumable index out of range: 0
+
