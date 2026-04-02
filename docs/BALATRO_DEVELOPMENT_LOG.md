@@ -38,6 +38,7 @@ Example live effects captured:
 
 ### Useful Files
 
+- [docs/BALATRO_FILE_MAP.md](BALATRO_FILE_MAP.md)
 - [skills/balatro/session.py](../skills/balatro/session.py)
 - [skills/balatro/router.py](../skills/balatro/router.py)
 - [skills/balatro/prompt_builder.py](../skills/balatro/prompt_builder.py)
