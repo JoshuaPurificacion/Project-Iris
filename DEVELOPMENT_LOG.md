@@ -2,6 +2,8 @@
 
 This document contains the full development history and decisions made during the creation of Project Iris for the Arduin-o-vation university exhibit.
 
+For Balatro-specific implementation notes and test history, see [docs/BALATRO_DEVELOPMENT_LOG.md](docs/BALATRO_DEVELOPMENT_LOG.md).
+
 ---
 
 ## Session Date: March 25, 2026
