@@ -40,3 +40,47 @@ class TestBalatroImportSafety(unittest.TestCase):
             # Future: import skills.balatro.actions
         except ImportError as e:
             self.fail(f"Circular or missing import detected: {e}")
+
+
+class TestBalatroClientRearrange(unittest.TestCase):
+    def test_rearrange_uses_modern_zone_payload(self):
+        from skills.balatro_client import BalatroClient
+
+        client = BalatroClient()
+        with patch.object(client, "_call", return_value={"ok": True}) as mock_call:
+            ok = client.rearrange(1, 2, "consumeables")
+
+        self.assertTrue(ok)
+        mock_call.assert_called_once_with(
+            "rearrange",
+            {"card": 1, "to": 2, "consumables": True},
+        )
+
+    def test_rearrange_falls_back_to_legacy_location_payload(self):
+        from skills.balatro_client import BalatroClient
+
+        client = BalatroClient()
+        with patch.object(client, "_call", side_effect=[None, {"ok": True}]) as mock_call:
+            ok = client.rearrange(0, 1, "jokers")
+
+        self.assertTrue(ok)
+        self.assertEqual(mock_call.call_count, 2)
+        self.assertEqual(
+            mock_call.call_args_list[0].args,
+            ("rearrange", {"card": 0, "to": 1, "jokers": True}),
+        )
+        self.assertEqual(
+            mock_call.call_args_list[1].args,
+            ("rearrange", {"card": 0, "to": 1, "location": "jokers"}),
+        )
+
+    def test_rearrange_rejects_invalid_location(self):
+        from skills.balatro_client import BalatroClient
+
+        client = BalatroClient()
+        with patch.object(client, "_call") as mock_call:
+            ok = client.rearrange(0, 1, "invalid")
+
+        self.assertFalse(ok)
+        mock_call.assert_not_called()
+        self.assertIn("Invalid rearrange location", client.last_error)

@@ -1,7 +1,7 @@
 import json
 import requests
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 logger = logging.getLogger(__name__)
@@ -18,9 +18,9 @@ class ContractModel(BaseModel):
 class CardValue(ContractModel):
     """Inner value properties of a card or joker."""
 
-    rank: Optional[str] = None
-    suit: Optional[str] = None
-    effect: Optional[str] = None
+    rank: str | None = None
+    suit: str | None = None
+    effect: str | None = None
 
 
 class CardItem(ContractModel):
@@ -30,9 +30,7 @@ class CardItem(ContractModel):
     key: str
     label: str
     value: CardValue
-    cost: Optional[Dict[str, int]] = (
-        None  # Present in some API responses; None = unknown
-    )
+    cost: Dict[str, int] | None = None  # Present in some API responses; None = unknown
 
 
 class CardContainer(ContractModel):
@@ -48,15 +46,15 @@ class BlindState(ContractModel):
     name: str
     status: str
     score: int
-    effect: Optional[str] = ""
+    effect: str | None = ""
 
 
 class BlindsContainer(ContractModel):
     """The current ante's three blinds."""
 
-    small: Optional[BlindState] = None
-    big: Optional[BlindState] = None
-    boss: Optional[BlindState] = None
+    small: BlindState | None = None
+    big: BlindState | None = None
+    boss: BlindState | None = None
 
 
 class RoundInfo(ContractModel):
@@ -74,15 +72,20 @@ class BalatroState(ContractModel):
     state: str = Field(default="Unknown")
     money: int = Field(default=0)
     ante_num: int = Field(default=1)
-    round: Optional[RoundInfo] = None
-    blinds: Optional[BlindsContainer] = None
-    jokers: Optional[CardContainer] = None
-    hand: Optional[CardContainer] = None
-    shop: Optional[CardContainer] = None
-    vouchers: Optional[CardContainer] = None
-    pack: Optional[CardContainer] = None
-    packs: Optional[CardContainer] = None
-    consumeables: Optional[CardContainer] = None
+    round: RoundInfo | None = None
+    blinds: BlindsContainer | None = None
+    jokers: CardContainer | None = None
+    hand: CardContainer | None = None
+    shop: CardContainer | None = None
+    vouchers: CardContainer | None = None
+    pack: CardContainer | None = None
+    packs: CardContainer | None = None
+    consumeables: CardContainer | None = None
+
+    # Optional explicit level metadata from API (strict explicit-data mode).
+    # Keep as loose dicts because payload shape can vary across client versions.
+    hand_levels: Dict[str, Any] | None = None
+    planet_levels: Dict[str, Any] | None = None
 
     # We ignore the full 52-card 'deck' array to save LLM context tokens.
 
@@ -99,11 +102,16 @@ class BalatroClient:
         self.session = requests.Session()
         self.session.headers.update({"Content-Type": "application/json"})
         self._request_id = 1
-        self._last_error: Optional[str] = None
+        self._last_error: str | None = None
+
+    @property
+    def last_error(self) -> str:
+        """Return the most recent API/client error, if any."""
+        return self._last_error or ""
 
     def _call(
-        self, method: str, params: Optional[Dict[str, Any]] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, method: str, params: Dict[str, Any] | None = None
+    ) -> Dict[str, Any] | None:
         """Handles the strict JSON-RPC 2.0 POST format."""
         self._last_error = None
         payload = {
@@ -124,9 +132,16 @@ class BalatroClient:
             data = response.json()
 
             if "error" in data:
-                error_msg = data["error"].get("message", str(data["error"]))
+                error_obj = data["error"]
+                error_msg = error_obj.get("message", str(error_obj))
+                error_name = ""
+                error_data = error_obj.get("data")
+                if isinstance(error_data, dict):
+                    error_name = str(error_data.get("name") or "")
                 logger.error(f"API Error ({method}): {data['error']}")
-                self._last_error = error_msg
+                self._last_error = (
+                    f"{error_name}: {error_msg}" if error_name else error_msg
+                )
                 return None
 
             return data.get("result")
@@ -140,10 +155,10 @@ class BalatroClient:
             self._last_error = str(e)
             return None
 
-    def get_game_state(self) -> Optional[Dict[str, Any]]:
+    def get_game_state(self) -> Dict[str, Any] | None:
         return self._call("gamestate")
 
-    def play_hand(self, card_ids: List[int]) -> tuple[bool, Optional[str]]:
+    def play_hand(self, card_ids: List[int]) -> tuple[bool, str | None]:
         result = self._call("play", {"cards": card_ids})
         if result is None:
             return False, getattr(self, "_last_error", "Unknown API Error")
@@ -167,9 +182,9 @@ class BalatroClient:
 
     def buy(
         self,
-        card: Optional[int] = None,
-        voucher: Optional[int] = None,
-        pack: Optional[int] = None,
+        card: int | None = None,
+        voucher: int | None = None,
+        pack: int | None = None,
     ) -> bool:
         """Buy a card, voucher, or pack from the shop."""
         params = {}
@@ -183,8 +198,8 @@ class BalatroClient:
 
     def pack(
         self,
-        card: Optional[int] = None,
-        targets: Optional[List[int]] = None,
+        card: int | None = None,
+        targets: List[int] | None = None,
         skip: bool = False,
     ) -> bool:
         """Interact with an open pack.
@@ -207,16 +222,21 @@ class BalatroClient:
     def sell(self, card: int, area: str) -> bool:
         """Sell a Joker or consumable.
 
-        Matches the upstream BalatroBot Lua API — 'sell' method with
-        {card, area} payload. Verified correct shape.
+        The upstream API requires exactly one of 'joker' or 'consumable'
+        as the payload key — the legacy {card, area} shape is rejected.
 
         Args:
             card: 0-based index of the card to sell within its area.
-            area: Zone identifier — 'jokers' or 'consumeables'.
+            area: Zone identifier — 'jokers'/'joker' or 'consumeables'/'consumables'.
         """
-        return self._call("sell", {"card": card, "area": area}) is not None
+        zone = str(area or "").strip().lower()
+        if zone in ("jokers", "joker"):
+            params = {"joker": card}
+        else:
+            params = {"consumable": card}
+        return self._call("sell", params) is not None
 
-    def use(self, card: int, targets: Optional[List[int]] = None) -> bool:
+    def use(self, card: int, targets: List[int] | None = None) -> bool:
         """Use a consumable card (Tarot, Planet, Spectral, etc.).
 
         Targeted consumables (e.g. Death, The Hanged Man, Strength) pass their
@@ -238,20 +258,38 @@ class BalatroClient:
         return self._call("reroll") is not None
 
     def rearrange(self, card: int, to: int, location: str) -> bool:
-        """Rearrange a card within a zone (Jokers or Consumeables).
+        """Rearrange a card within a zone.
 
-        Matches the upstream BalatroBot Lua API exactly — uses 'rearrange'
-        as the method name and 'location' as the zone parameter.
+        API compatibility:
+        - Newer servers require exactly one explicit zone key in params:
+          'hand', 'jokers', or 'consumables'.
+        - Older servers used a legacy 'location' string field.
+
+        This method prefers the explicit-zone payload and falls back to the
+        legacy payload if needed.
 
         Args:
-            card:     0-based source index.
-            to:       0-based destination index.
-            location: Zone identifier — 'jokers' or 'consumeables'.
+            card: 0-based source index.
+            to: 0-based destination index.
+            location: Zone identifier ('hand', 'jokers', 'consumables', or legacy 'consumeables').
         """
-        return (
-            self._call("rearrange", {"card": card, "to": to, "location": location})
-            is not None
-        )
+        zone = str(location or "").strip().lower()
+        if zone == "joker":
+            zone = "jokers"
+        elif zone in {"consumable", "consumeables", "consumables"}:
+            zone = "consumables"
+        elif zone not in {"hand", "jokers"}:
+            self._last_error = f"Invalid rearrange location: {location!r}"
+            return False
+
+        modern_payload = {"card": card, "to": to, zone: []}
+        if self._call("rearrange", modern_payload) is not None:
+            return True
+
+        # Backward compatibility for older location-based RPC variants.
+        legacy_zone = "consumeables" if zone == "consumables" else zone
+        legacy_payload = {"card": card, "to": to, "location": legacy_zone}
+        return self._call("rearrange", legacy_payload) is not None
 
 
 # --- Game Controller ---
@@ -260,7 +298,7 @@ class GameController:
 
     def __init__(self):
         self.client = BalatroClient()
-        self.current_state: Optional[BalatroState] = None
+        self.current_state: BalatroState | None = None
         self.raw_state: dict = {}
 
     def refresh_state(self) -> bool:
@@ -292,12 +330,12 @@ class GameController:
 
         excludes = {"cards", "hands", "used_vouchers"}
         state_str = (self.current_state.state or "").lower()
-        if "pack" in state_str or "booster" in state_str:
-            excludes.add("shop")  # Omit shop when in pack
-            # Ensure hand is NOT excluded (it's not by default, but explicitly kept)
-        else:
-            # We can optionally exclude hand during shop if we want, but let's keep it safe.
-            pass
+        # Strip shop inventory from phases where the shop is not open.
+        # Without this, shop data leaks into round_eval and blind prompts,
+        # causing the LLM to attempt buy_shop in invalid phases.
+        NON_SHOP_PHASES = ("pack", "booster", "round_eval", "blind")
+        if any(phase in state_str for phase in NON_SHOP_PHASES):
+            excludes.add("shop")
 
         return self.current_state.model_dump_json(indent=2, exclude=excludes)
 

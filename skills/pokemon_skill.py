@@ -17,7 +17,6 @@ import os
 import subprocess
 import threading
 import time
-from typing import Optional
 
 # ── Paths — adjust if your layout differs ─────────────────────────────────
 _PROJECT_POKEMON = r"C:\Users\Josh\Documents\Project-Iris-Pokemon"
@@ -37,7 +36,7 @@ class _PokemonState:
         self.current_goal = None
         self.frames_run = 0
         self._agent = None
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
 
 
@@ -47,7 +46,7 @@ _state = _PokemonState()
 # ── Agent thread ──────────────────────────────────────────────────────────
 
 
-def _agent_loop(goal_xy: Optional[tuple]):
+def _agent_loop(goal_xy: tuple | None):
     """Runs the emulator server + agent loop in a background thread."""
     import sys
 

@@ -15,7 +15,7 @@ class ActionResult:
     """Result of action execution."""
 
     succeeded: bool
-    error: typing.Optional[str] = None
+    error: str | None = None
     persona_reasoning: str = ""
 
 
@@ -86,12 +86,12 @@ class ActionRegistry:
         return action_class
 
     @classmethod
-    def get(cls, action_name: str) -> typing.Optional[typing.Type[BaseAction]]:
+    def get(cls, action_name: str) -> typing.Type[BaseAction] | None:
         """Get action class by name."""
         return cls._actions.get(action_name)
 
     @classmethod
-    def create(cls, action_name: str) -> typing.Optional[BaseAction]:
+    def create(cls, action_name: str) -> BaseAction | None:
         """Create an instance of the action."""
         action_class = cls.get(action_name)
         if action_class:

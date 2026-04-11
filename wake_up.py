@@ -74,7 +74,6 @@ def rpg_game_loop(iris, avatar, game_window):
         log_system(f"[RPG] Iris chose: {action}")
         game_window.set_status(f"Iris chose: {action}")
 
-
         # No longer wait for TTS queue to clear; apply move immediately for responsiveness
         game_window.set_status("Waiting for Iris to move...")
 
@@ -323,4 +322,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        try:
+            from skills.balatro_bot.modules.balatro_telemetry import flush_telemetry
+
+            flush_telemetry()
+        except Exception:
+            pass

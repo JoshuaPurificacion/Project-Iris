@@ -1,0 +1,451 @@
+joker_key,joker_name,scenario,cost,advisor,impact_pct,would_buy,reason
+j_8_ball,8 Ball,early_no_core,5,BAD SYNERGY,10.0,0,bad_synergy
+j_8_ball,8 Ball,early_with_core,5,BAD SYNERGY,0.0,0,bad_synergy
+j_8_ball,8 Ball,mid_flush_core,5,BAD SYNERGY,0.0,0,bad_synergy
+j_abstract,Abstract Joker,early_no_core,4,HIGH SYNERGY,92.35,1,buy_signal
+j_abstract,Abstract Joker,early_with_core,4,HIGH SYNERGY,75.12,1,buy_signal
+j_abstract,Abstract Joker,mid_flush_core,4,HIGH SYNERGY,75.12,1,buy_signal
+j_acrobat,Acrobat,early_no_core,6,HIGH SYNERGY,230.0,1,buy_signal
+j_acrobat,Acrobat,early_with_core,6,HIGH SYNERGY,200.16,1,buy_signal
+j_acrobat,Acrobat,mid_flush_core,6,HIGH SYNERGY,200.16,1,buy_signal
+j_ancient,Ancient Joker,early_no_core,8,HIGH SYNERGY,65.0,1,buy_signal
+j_ancient,Ancient Joker,early_with_core,8,HIGH SYNERGY,50.08,1,buy_signal
+j_ancient,Ancient Joker,mid_flush_core,8,HIGH SYNERGY,50.08,1,buy_signal
+j_arrowhead,Arrowhead,early_no_core,7,HIGH SYNERGY,295.29,1,buy_signal
+j_arrowhead,Arrowhead,early_with_core,7,HIGH SYNERGY,224.22,1,buy_signal
+j_arrowhead,Arrowhead,mid_flush_core,7,HIGH SYNERGY,224.22,1,buy_signal
+j_astronomer,Astronomer,early_no_core,8,MODERATE VALUE,10.0,0,early_reserve_block
+j_astronomer,Astronomer,early_with_core,8,LOW VALUE,0.0,0,low_value
+j_astronomer,Astronomer,mid_flush_core,8,LOW VALUE,0.0,0,low_value
+j_banner,Banner,early_no_core,5,HIGH SYNERGY,48.82,1,buy_signal
+j_banner,Banner,early_with_core,5,HIGH SYNERGY,26.19,1,buy_signal
+j_banner,Banner,mid_flush_core,5,HIGH SYNERGY,26.19,1,buy_signal
+j_baron,Baron,early_no_core,8,HIGH SYNERGY,65.0,1,buy_signal
+j_baron,Baron,early_with_core,8,HIGH SYNERGY,50.08,1,buy_signal
+j_baron,Baron,mid_flush_core,8,HIGH SYNERGY,50.08,1,buy_signal
+j_baseball,Baseball Card,early_no_core,8,HIGH SYNERGY,65.0,1,buy_signal
+j_baseball,Baseball Card,early_with_core,8,HIGH SYNERGY,50.08,1,buy_signal
+j_baseball,Baseball Card,mid_flush_core,8,HIGH SYNERGY,50.08,1,buy_signal
+j_blackboard,Blackboard,early_no_core,6,BAD SYNERGY,644.71,0,bad_synergy
+j_blackboard,Blackboard,early_with_core,6,BAD SYNERGY,576.61,0,bad_synergy
+j_blackboard,Blackboard,mid_flush_core,6,BAD SYNERGY,576.61,0,bad_synergy
+j_bloodstone,Bloodstone,early_no_core,7,BAD SYNERGY,67.35,0,bad_synergy
+j_bloodstone,Bloodstone,early_with_core,7,BAD SYNERGY,51.4,0,bad_synergy
+j_bloodstone,Bloodstone,mid_flush_core,7,BAD SYNERGY,51.4,0,bad_synergy
+j_blue_joker,Blue Joker,early_no_core,5,MODERATE VALUE,12.65,1,buy_signal
+j_blue_joker,Blue Joker,early_with_core,5,HIGH SYNERGY,1.81,1,buy_signal
+j_blue_joker,Blue Joker,mid_flush_core,5,HIGH SYNERGY,1.81,1,buy_signal
+j_blueprint,Blueprint,early_no_core,10,MODERATE VALUE,10.0,0,early_reserve_block
+j_blueprint,Blueprint,early_with_core,10,LOW VALUE,0.0,0,low_value
+j_blueprint,Blueprint,mid_flush_core,10,LOW VALUE,0.0,0,low_value
+j_bootstraps,Bootstraps,early_no_core,7,HIGH SYNERGY,65.0,1,buy_signal
+j_bootstraps,Bootstraps,early_with_core,7,HIGH SYNERGY,50.08,1,buy_signal
+j_bootstraps,Bootstraps,mid_flush_core,7,HIGH SYNERGY,50.08,1,buy_signal
+j_brainstorm,Brainstorm,early_no_core,10,MODERATE VALUE,10.0,0,early_reserve_block
+j_brainstorm,Brainstorm,early_with_core,10,LOW VALUE,0.0,0,low_value
+j_brainstorm,Brainstorm,mid_flush_core,10,LOW VALUE,0.0,0,low_value
+j_bull,Bull,early_no_core,6,MODERATE VALUE,12.65,1,buy_signal
+j_bull,Bull,early_with_core,6,HIGH SYNERGY,1.81,1,buy_signal
+j_bull,Bull,mid_flush_core,6,HIGH SYNERGY,1.81,1,buy_signal
+j_burglar,Burglar,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_burglar,Burglar,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_burglar,Burglar,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_burnt,Burnt Joker,early_no_core,8,MODERATE VALUE,10.0,0,early_reserve_block
+j_burnt,Burnt Joker,early_with_core,8,LOW VALUE,0.0,0,low_value
+j_burnt,Burnt Joker,mid_flush_core,8,LOW VALUE,0.0,0,low_value
+j_business,Business Card,early_no_core,4,BAD SYNERGY,32.06,0,bad_synergy
+j_business,Business Card,early_with_core,4,BAD SYNERGY,20.1,0,bad_synergy
+j_business,Business Card,mid_flush_core,4,BAD SYNERGY,20.1,0,bad_synergy
+j_caino,Caino,early_no_core,20,HIGH SYNERGY,32.06,0,insufficient_funds
+j_caino,Caino,early_with_core,20,MODERATE VALUE,20.1,1,buy_signal
+j_caino,Caino,mid_flush_core,20,MODERATE VALUE,20.1,1,buy_signal
+j_campfire,Campfire,early_no_core,9,LOW VALUE,0.0,0,low_value
+j_campfire,Campfire,early_with_core,9,LOW VALUE,0.0,0,low_value
+j_campfire,Campfire,mid_flush_core,9,LOW VALUE,0.0,0,low_value
+j_card_sharp,Card Sharp,early_no_core,6,HIGH SYNERGY,230.0,1,buy_signal
+j_card_sharp,Card Sharp,early_with_core,6,HIGH SYNERGY,200.16,1,buy_signal
+j_card_sharp,Card Sharp,mid_flush_core,6,HIGH SYNERGY,200.16,1,buy_signal
+j_cartomancer,Cartomancer,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_cartomancer,Cartomancer,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_cartomancer,Cartomancer,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_castle,Castle,early_no_core,6,MODERATE VALUE,13.82,1,buy_signal
+j_castle,Castle,early_with_core,6,HIGH SYNERGY,2.64,1,buy_signal
+j_castle,Castle,mid_flush_core,6,HIGH SYNERGY,2.64,1,buy_signal
+j_cavendish,Cavendish,early_no_core,4,BAD SYNERGY,230.0,0,bad_synergy
+j_cavendish,Cavendish,early_with_core,4,BAD SYNERGY,200.16,0,bad_synergy
+j_cavendish,Cavendish,mid_flush_core,4,BAD SYNERGY,200.16,0,bad_synergy
+j_ceremonial,Ceremonial Dagger,early_no_core,6,MODERATE VALUE,10.0,1,buy_signal
+j_ceremonial,Ceremonial Dagger,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_ceremonial,Ceremonial Dagger,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_certificate,Certificate,early_no_core,6,BAD SYNERGY,10.0,0,bad_synergy
+j_certificate,Certificate,early_with_core,6,BAD SYNERGY,0.0,0,bad_synergy
+j_certificate,Certificate,mid_flush_core,6,BAD SYNERGY,0.0,0,bad_synergy
+j_chaos,Chaos the Clown,early_no_core,4,MODERATE VALUE,10.0,0,early_reserve_block
+j_chaos,Chaos the Clown,early_with_core,4,LOW VALUE,0.0,0,low_value
+j_chaos,Chaos the Clown,mid_flush_core,4,LOW VALUE,0.0,0,low_value
+j_chicot,Chicot,early_no_core,20,MODERATE VALUE,10.0,0,insufficient_funds
+j_chicot,Chicot,early_with_core,20,LOW VALUE,0.0,0,early_reserve_block
+j_chicot,Chicot,mid_flush_core,20,LOW VALUE,0.0,0,low_value
+j_clever,Clever Joker,early_no_core,4,BAD SYNERGY,113.53,0,bad_synergy
+j_clever,Clever Joker,early_with_core,4,BAD SYNERGY,69.69,0,bad_synergy
+j_clever,Clever Joker,mid_flush_core,4,BAD SYNERGY,69.69,0,bad_synergy
+j_cloud_9,Cloud 9,early_no_core,7,MODERATE VALUE,10.0,0,early_reserve_block
+j_cloud_9,Cloud 9,early_with_core,7,LOW VALUE,0.0,0,low_value
+j_cloud_9,Cloud 9,mid_flush_core,7,LOW VALUE,0.0,0,low_value
+j_constellation,Constellation,early_no_core,6,LOW VALUE,0.0,0,low_value
+j_constellation,Constellation,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_constellation,Constellation,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_crafty,Crafty Joker,early_no_core,4,HIGH SYNERGY,330.0,1,buy_signal
+j_crafty,Crafty Joker,early_with_core,4,HIGH SYNERGY,240.86,1,buy_signal
+j_crafty,Crafty Joker,mid_flush_core,4,HIGH SYNERGY,240.86,1,buy_signal
+j_crazy,Crazy Joker,early_no_core,4,BAD SYNERGY,340.0,0,bad_synergy
+j_crazy,Crazy Joker,early_with_core,4,BAD SYNERGY,300.16,0,bad_synergy
+j_crazy,Crazy Joker,mid_flush_core,4,BAD SYNERGY,300.16,0,bad_synergy
+j_credit_card,Credit Card,early_no_core,1,MODERATE VALUE,10.0,0,early_reserve_block
+j_credit_card,Credit Card,early_with_core,1,LOW VALUE,0.0,0,low_value
+j_credit_card,Credit Card,mid_flush_core,1,LOW VALUE,0.0,0,low_value
+j_delayed_grat,Delayed Gratification,early_no_core,4,MODERATE VALUE,10.0,0,early_reserve_block
+j_delayed_grat,Delayed Gratification,early_with_core,4,LOW VALUE,0.0,0,low_value
+j_delayed_grat,Delayed Gratification,mid_flush_core,4,LOW VALUE,0.0,0,low_value
+j_devious,Devious Joker,early_no_core,4,BAD SYNERGY,139.41,0,bad_synergy
+j_devious,Devious Joker,early_with_core,4,BAD SYNERGY,86.99,0,bad_synergy
+j_devious,Devious Joker,mid_flush_core,4,BAD SYNERGY,86.99,0,bad_synergy
+j_diet_cola,Diet Cola,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_diet_cola,Diet Cola,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_diet_cola,Diet Cola,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_dna,DNA,early_no_core,8,MODERATE VALUE,10.0,0,early_reserve_block
+j_dna,DNA,early_with_core,8,LOW VALUE,0.0,0,low_value
+j_dna,DNA,mid_flush_core,8,LOW VALUE,0.0,0,low_value
+j_drivers_license,Driver,early_no_core,7,HIGH SYNERGY,230.0,1,buy_signal
+j_drivers_license,Driver,early_with_core,7,HIGH SYNERGY,200.16,1,buy_signal
+j_drivers_license,Driver,mid_flush_core,7,HIGH SYNERGY,200.16,1,buy_signal
+j_droll,Droll Joker,early_no_core,4,HIGH SYNERGY,397.94,1,buy_signal
+j_droll,Droll Joker,early_with_core,4,HIGH SYNERGY,351.73,1,buy_signal
+j_droll,Droll Joker,mid_flush_core,4,HIGH SYNERGY,351.73,1,buy_signal
+j_drunkard,Drunkard,early_no_core,4,MODERATE VALUE,10.0,0,early_reserve_block
+j_drunkard,Drunkard,early_with_core,4,LOW VALUE,0.0,0,low_value
+j_drunkard,Drunkard,mid_flush_core,4,LOW VALUE,0.0,0,low_value
+j_duo,The Duo,early_no_core,8,BAD SYNERGY,120.0,0,bad_synergy
+j_duo,The Duo,early_with_core,8,BAD SYNERGY,100.0,0,bad_synergy
+j_duo,The Duo,mid_flush_core,8,BAD SYNERGY,100.0,0,bad_synergy
+j_dusk,Dusk,early_no_core,5,MODERATE VALUE,10.0,0,early_reserve_block
+j_dusk,Dusk,early_with_core,5,LOW VALUE,0.0,0,low_value
+j_dusk,Dusk,mid_flush_core,5,LOW VALUE,0.0,0,low_value
+j_egg,Egg,early_no_core,4,MODERATE VALUE,10.0,0,early_reserve_block
+j_egg,Egg,early_with_core,4,LOW VALUE,0.0,0,low_value
+j_egg,Egg,mid_flush_core,4,LOW VALUE,0.0,0,low_value
+j_erosion,Erosion,early_no_core,6,HIGH SYNERGY,120.0,1,buy_signal
+j_erosion,Erosion,early_with_core,6,HIGH SYNERGY,100.0,1,buy_signal
+j_erosion,Erosion,mid_flush_core,6,HIGH SYNERGY,100.0,1,buy_signal
+j_even_steven,Even Steven,early_no_core,4,HIGH SYNERGY,120.0,1,buy_signal
+j_even_steven,Even Steven,early_with_core,4,HIGH SYNERGY,100.0,1,buy_signal
+j_even_steven,Even Steven,mid_flush_core,4,HIGH SYNERGY,100.0,1,buy_signal
+j_faceless,Faceless Joker,early_no_core,4,HIGH SYNERGY,32.06,0,early_reserve_block
+j_faceless,Faceless Joker,early_with_core,4,MODERATE VALUE,20.1,1,buy_signal
+j_faceless,Faceless Joker,mid_flush_core,4,MODERATE VALUE,20.1,1,buy_signal
+j_family,The Family,early_no_core,8,HIGH SYNERGY,340.0,1,buy_signal
+j_family,The Family,early_with_core,8,HIGH SYNERGY,300.16,1,buy_signal
+j_family,The Family,mid_flush_core,8,HIGH SYNERGY,300.16,1,buy_signal
+j_fibonacci,Fibonacci,early_no_core,8,HIGH SYNERGY,230.0,1,buy_signal
+j_fibonacci,Fibonacci,early_with_core,8,HIGH SYNERGY,200.16,1,buy_signal
+j_fibonacci,Fibonacci,mid_flush_core,8,HIGH SYNERGY,200.16,1,buy_signal
+j_flash,Flash Card,early_no_core,5,HIGH SYNERGY,65.0,1,buy_signal
+j_flash,Flash Card,early_with_core,5,HIGH SYNERGY,50.08,1,buy_signal
+j_flash,Flash Card,mid_flush_core,5,HIGH SYNERGY,50.08,1,buy_signal
+j_flower_pot,Flower Pot,early_no_core,6,BAD SYNERGY,644.71,0,bad_synergy
+j_flower_pot,Flower Pot,early_with_core,6,BAD SYNERGY,576.61,0,bad_synergy
+j_flower_pot,Flower Pot,mid_flush_core,6,BAD SYNERGY,576.61,0,bad_synergy
+j_fortune_teller,Fortune Teller,early_no_core,6,BAD SYNERGY,37.65,0,bad_synergy
+j_fortune_teller,Fortune Teller,early_with_core,6,BAD SYNERGY,25.04,0,bad_synergy
+j_fortune_teller,Fortune Teller,mid_flush_core,6,BAD SYNERGY,25.04,0,bad_synergy
+j_four_fingers,Four Fingers,early_no_core,7,HIGH SYNERGY,122.94,0,early_reserve_block
+j_four_fingers,Four Fingers,early_with_core,7,HIGH SYNERGY,101.65,1,buy_signal
+j_four_fingers,Four Fingers,mid_flush_core,7,HIGH SYNERGY,101.65,1,buy_signal
+j_gift,Gift Card,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_gift,Gift Card,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_gift,Gift Card,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_glass,Glass Joker,early_no_core,6,LOW VALUE,0.0,0,low_value
+j_glass,Glass Joker,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_glass,Glass Joker,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_gluttenous_joker,Gluttonous Joker,early_no_core,5,BAD SYNERGY,92.35,0,bad_synergy
+j_gluttenous_joker,Gluttonous Joker,early_with_core,5,BAD SYNERGY,75.12,0,bad_synergy
+j_gluttenous_joker,Gluttonous Joker,mid_flush_core,5,BAD SYNERGY,75.12,0,bad_synergy
+j_golden,Golden Joker,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_golden,Golden Joker,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_golden,Golden Joker,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_greedy_joker,Greedy Joker,early_no_core,5,BAD SYNERGY,92.35,0,bad_synergy
+j_greedy_joker,Greedy Joker,early_with_core,5,BAD SYNERGY,75.12,0,bad_synergy
+j_greedy_joker,Greedy Joker,mid_flush_core,5,BAD SYNERGY,75.12,0,bad_synergy
+j_green_joker,Green Joker,early_no_core,4,BAD SYNERGY,37.65,0,bad_synergy
+j_green_joker,Green Joker,early_with_core,4,BAD SYNERGY,25.04,0,bad_synergy
+j_green_joker,Green Joker,mid_flush_core,4,BAD SYNERGY,25.04,0,bad_synergy
+j_gros_michel,Gros Michel,early_no_core,5,BAD SYNERGY,422.65,0,bad_synergy
+j_gros_michel,Gros Michel,early_with_core,5,BAD SYNERGY,375.12,0,bad_synergy
+j_gros_michel,Gros Michel,mid_flush_core,5,BAD SYNERGY,375.12,0,bad_synergy
+j_hack,Hack,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_hack,Hack,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_hack,Hack,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_half,Half Joker,early_no_core,5,BAD SYNERGY,560.0,0,bad_synergy
+j_half,Half Joker,early_with_core,5,BAD SYNERGY,500.16,0,bad_synergy
+j_half,Half Joker,mid_flush_core,5,BAD SYNERGY,500.16,0,bad_synergy
+j_hallucination,Hallucination,early_no_core,4,BAD SYNERGY,10.0,0,bad_synergy
+j_hallucination,Hallucination,early_with_core,4,BAD SYNERGY,0.0,0,bad_synergy
+j_hallucination,Hallucination,mid_flush_core,4,BAD SYNERGY,0.0,0,bad_synergy
+j_hanging_chad,Hanging Chad,early_no_core,4,MODERATE VALUE,10.0,0,early_reserve_block
+j_hanging_chad,Hanging Chad,early_with_core,4,LOW VALUE,0.0,0,low_value
+j_hanging_chad,Hanging Chad,mid_flush_core,4,LOW VALUE,0.0,0,low_value
+j_hiker,Hiker,early_no_core,5,MODERATE VALUE,16.47,1,buy_signal
+j_hiker,Hiker,early_with_core,5,HIGH SYNERGY,4.45,1,buy_signal
+j_hiker,Hiker,mid_flush_core,5,HIGH SYNERGY,4.45,1,buy_signal
+j_hit_the_road,Hit the Road,early_no_core,8,LOW VALUE,0.0,0,low_value
+j_hit_the_road,Hit the Road,early_with_core,8,LOW VALUE,0.0,0,low_value
+j_hit_the_road,Hit the Road,mid_flush_core,8,LOW VALUE,0.0,0,low_value
+j_hologram,Hologram,early_no_core,7,LOW VALUE,0.0,0,low_value
+j_hologram,Hologram,early_with_core,7,LOW VALUE,0.0,0,low_value
+j_hologram,Hologram,mid_flush_core,7,LOW VALUE,0.0,0,low_value
+j_ice_cream,Ice Cream,early_no_core,5,HIGH SYNERGY,139.41,1,buy_signal
+j_ice_cream,Ice Cream,early_with_core,5,HIGH SYNERGY,86.99,1,buy_signal
+j_ice_cream,Ice Cream,mid_flush_core,5,HIGH SYNERGY,86.99,1,buy_signal
+j_idol,The Idol,early_no_core,6,HIGH SYNERGY,120.0,1,buy_signal
+j_idol,The Idol,early_with_core,6,HIGH SYNERGY,100.0,1,buy_signal
+j_idol,The Idol,mid_flush_core,6,HIGH SYNERGY,100.0,1,buy_signal
+j_invisible,Invisible Joker,early_no_core,8,BAD SYNERGY,10.0,0,bad_synergy
+j_invisible,Invisible Joker,early_with_core,8,BAD SYNERGY,0.0,0,bad_synergy
+j_invisible,Invisible Joker,mid_flush_core,8,BAD SYNERGY,0.0,0,bad_synergy
+j_joker,Joker,early_no_core,2,HIGH SYNERGY,120.0,1,buy_signal
+j_joker,Joker,early_with_core,2,HIGH SYNERGY,100.0,1,buy_signal
+j_joker,Joker,mid_flush_core,2,HIGH SYNERGY,100.0,1,buy_signal
+j_jolly,Jolly Joker,early_no_core,3,BAD SYNERGY,230.0,0,bad_synergy
+j_jolly,Jolly Joker,early_with_core,3,BAD SYNERGY,200.16,0,bad_synergy
+j_jolly,Jolly Joker,mid_flush_core,3,BAD SYNERGY,200.16,0,bad_synergy
+j_juggler,Juggler,early_no_core,4,MODERATE VALUE,10.0,0,early_reserve_block
+j_juggler,Juggler,early_with_core,4,LOW VALUE,0.0,0,low_value
+j_juggler,Juggler,mid_flush_core,4,LOW VALUE,0.0,0,low_value
+j_loyalty_card,Loyalty Card,early_no_core,5,HIGH SYNERGY,340.0,1,buy_signal
+j_loyalty_card,Loyalty Card,early_with_core,5,HIGH SYNERGY,300.16,1,buy_signal
+j_loyalty_card,Loyalty Card,mid_flush_core,5,HIGH SYNERGY,300.16,1,buy_signal
+j_luchador,Luchador,early_no_core,5,MODERATE VALUE,10.0,0,early_reserve_block
+j_luchador,Luchador,early_with_core,5,LOW VALUE,0.0,0,low_value
+j_luchador,Luchador,mid_flush_core,5,LOW VALUE,0.0,0,low_value
+j_lucky_cat,Lucky Cat,early_no_core,6,LOW VALUE,0.0,0,low_value
+j_lucky_cat,Lucky Cat,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_lucky_cat,Lucky Cat,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_lusty_joker,Lusty Joker,early_no_core,5,HIGH SYNERGY,94.71,1,buy_signal
+j_lusty_joker,Lusty Joker,early_with_core,5,HIGH SYNERGY,76.44,1,buy_signal
+j_lusty_joker,Lusty Joker,mid_flush_core,5,HIGH SYNERGY,76.44,1,buy_signal
+j_mad,Mad Joker,early_no_core,4,BAD SYNERGY,285.0,0,bad_synergy
+j_mad,Mad Joker,early_with_core,4,BAD SYNERGY,250.08,0,bad_synergy
+j_mad,Mad Joker,mid_flush_core,4,BAD SYNERGY,250.08,0,bad_synergy
+j_madness,Madness,early_no_core,7,BAD SYNERGY,0.0,0,bad_synergy
+j_madness,Madness,early_with_core,7,BAD SYNERGY,0.0,0,bad_synergy
+j_madness,Madness,mid_flush_core,7,BAD SYNERGY,0.0,0,bad_synergy
+j_mail,Mail-In Rebate,early_no_core,4,MODERATE VALUE,10.0,0,early_reserve_block
+j_mail,Mail-In Rebate,early_with_core,4,LOW VALUE,0.0,0,low_value
+j_mail,Mail-In Rebate,mid_flush_core,4,LOW VALUE,0.0,0,low_value
+j_marble,Marble Joker,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_marble,Marble Joker,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_marble,Marble Joker,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_matador,Matador,early_no_core,7,MODERATE VALUE,10.0,0,early_reserve_block
+j_matador,Matador,early_with_core,7,LOW VALUE,0.0,0,low_value
+j_matador,Matador,mid_flush_core,7,LOW VALUE,0.0,0,low_value
+j_merry_andy,Merry Andy,early_no_core,7,MODERATE VALUE,10.0,0,early_reserve_block
+j_merry_andy,Merry Andy,early_with_core,7,LOW VALUE,0.0,0,low_value
+j_merry_andy,Merry Andy,mid_flush_core,7,LOW VALUE,0.0,0,low_value
+j_midas_mask,Midas Mask,early_no_core,7,HIGH SYNERGY,32.06,0,early_reserve_block
+j_midas_mask,Midas Mask,early_with_core,7,MODERATE VALUE,20.1,1,buy_signal
+j_midas_mask,Midas Mask,mid_flush_core,7,MODERATE VALUE,20.1,1,buy_signal
+j_mime,Mime,early_no_core,5,MODERATE VALUE,10.0,0,early_reserve_block
+j_mime,Mime,early_with_core,5,LOW VALUE,0.0,0,low_value
+j_mime,Mime,mid_flush_core,5,LOW VALUE,0.0,0,low_value
+j_misprint,Misprint,early_no_core,4,MODERATE VALUE,10.0,1,buy_signal
+j_misprint,Misprint,early_with_core,4,LOW VALUE,0.0,0,low_value
+j_misprint,Misprint,mid_flush_core,4,LOW VALUE,0.0,0,low_value
+j_mr_bones,Mr. Bones,early_no_core,5,MODERATE VALUE,10.0,1,buy_signal
+j_mr_bones,Mr. Bones,early_with_core,5,LOW VALUE,0.0,0,low_value
+j_mr_bones,Mr. Bones,mid_flush_core,5,LOW VALUE,0.0,0,low_value
+j_mystic_summit,Mystic Summit,early_no_core,5,HIGH SYNERGY,422.65,1,buy_signal
+j_mystic_summit,Mystic Summit,early_with_core,5,HIGH SYNERGY,375.12,1,buy_signal
+j_mystic_summit,Mystic Summit,mid_flush_core,5,HIGH SYNERGY,375.12,1,buy_signal
+j_obelisk,Obelisk,early_no_core,8,LOW VALUE,0.0,0,low_value
+j_obelisk,Obelisk,early_with_core,8,LOW VALUE,0.0,0,low_value
+j_obelisk,Obelisk,mid_flush_core,8,LOW VALUE,0.0,0,low_value
+j_odd_todd,Odd Todd,early_no_core,4,HIGH SYNERGY,50.0,1,buy_signal
+j_odd_todd,Odd Todd,early_with_core,4,HIGH SYNERGY,27.02,1,buy_signal
+j_odd_todd,Odd Todd,mid_flush_core,4,HIGH SYNERGY,27.02,1,buy_signal
+j_onyx_agate,Onyx Agate,early_no_core,7,BAD SYNERGY,202.35,0,bad_synergy
+j_onyx_agate,Onyx Agate,early_with_core,7,BAD SYNERGY,175.12,0,bad_synergy
+j_onyx_agate,Onyx Agate,mid_flush_core,7,BAD SYNERGY,175.12,0,bad_synergy
+j_oops,Oops! All 6s,early_no_core,4,MODERATE VALUE,10.0,0,early_reserve_block
+j_oops,Oops! All 6s,early_with_core,4,LOW VALUE,0.0,0,low_value
+j_oops,Oops! All 6s,mid_flush_core,4,LOW VALUE,0.0,0,low_value
+j_order,The Order,early_no_core,8,BAD SYNERGY,230.0,0,bad_synergy
+j_order,The Order,early_with_core,8,BAD SYNERGY,200.16,0,bad_synergy
+j_order,The Order,mid_flush_core,8,BAD SYNERGY,200.16,0,bad_synergy
+j_pareidolia,Pareidolia,early_no_core,5,HIGH SYNERGY,32.06,0,early_reserve_block
+j_pareidolia,Pareidolia,early_with_core,5,MODERATE VALUE,20.1,1,buy_signal
+j_pareidolia,Pareidolia,mid_flush_core,5,MODERATE VALUE,20.1,1,buy_signal
+j_perkeo,Perkeo,early_no_core,20,BAD SYNERGY,10.0,0,bad_synergy
+j_perkeo,Perkeo,early_with_core,20,BAD SYNERGY,0.0,0,bad_synergy
+j_perkeo,Perkeo,mid_flush_core,20,BAD SYNERGY,0.0,0,bad_synergy
+j_photograph,Photograph,early_no_core,5,HIGH SYNERGY,164.12,1,buy_signal
+j_photograph,Photograph,early_with_core,5,HIGH SYNERGY,140.03,1,buy_signal
+j_photograph,Photograph,mid_flush_core,5,HIGH SYNERGY,140.03,1,buy_signal
+j_popcorn,Popcorn,early_no_core,5,HIGH SYNERGY,560.0,1,buy_signal
+j_popcorn,Popcorn,early_with_core,5,HIGH SYNERGY,500.16,1,buy_signal
+j_popcorn,Popcorn,mid_flush_core,5,HIGH SYNERGY,500.16,1,buy_signal
+j_raised_fist,Raised Fist,early_no_core,5,MODERATE VALUE,10.0,1,buy_signal
+j_raised_fist,Raised Fist,early_with_core,5,LOW VALUE,0.0,0,low_value
+j_raised_fist,Raised Fist,mid_flush_core,5,LOW VALUE,0.0,0,low_value
+j_ramen,Ramen,early_no_core,6,LOW VALUE,0.0,0,low_value
+j_ramen,Ramen,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_ramen,Ramen,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_red_card,Red Card,early_no_core,5,BAD SYNERGY,92.35,0,bad_synergy
+j_red_card,Red Card,early_with_core,5,BAD SYNERGY,75.12,0,bad_synergy
+j_red_card,Red Card,mid_flush_core,5,BAD SYNERGY,75.12,0,bad_synergy
+j_reserved_parking,Reserved Parking,early_no_core,6,BAD SYNERGY,32.06,0,bad_synergy
+j_reserved_parking,Reserved Parking,early_with_core,6,BAD SYNERGY,20.1,0,bad_synergy
+j_reserved_parking,Reserved Parking,mid_flush_core,6,BAD SYNERGY,20.1,0,bad_synergy
+j_ride_the_bus,Ride the Bus,early_no_core,6,BAD SYNERGY,67.94,0,bad_synergy
+j_ride_the_bus,Ride the Bus,early_with_core,6,BAD SYNERGY,51.73,0,bad_synergy
+j_ride_the_bus,Ride the Bus,mid_flush_core,6,BAD SYNERGY,51.73,0,bad_synergy
+j_riff_raff,Riff-raff,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_riff_raff,Riff-raff,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_riff_raff,Riff-raff,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_ring_master,Showman,early_no_core,5,MODERATE VALUE,10.0,0,early_reserve_block
+j_ring_master,Showman,early_with_core,5,LOW VALUE,0.0,0,low_value
+j_ring_master,Showman,mid_flush_core,5,LOW VALUE,0.0,0,low_value
+j_rocket,Rocket,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_rocket,Rocket,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_rocket,Rocket,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_rough_gem,Rough Gem,early_no_core,7,BAD SYNERGY,10.0,0,bad_synergy
+j_rough_gem,Rough Gem,early_with_core,7,BAD SYNERGY,0.0,0,bad_synergy
+j_rough_gem,Rough Gem,mid_flush_core,7,BAD SYNERGY,0.0,0,bad_synergy
+j_runner,Runner,early_no_core,5,BAD SYNERGY,29.41,0,bad_synergy
+j_runner,Runner,early_with_core,5,BAD SYNERGY,13.01,0,bad_synergy
+j_runner,Runner,mid_flush_core,5,BAD SYNERGY,13.01,0,bad_synergy
+j_satellite,Satellite,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_satellite,Satellite,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_satellite,Satellite,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_scary_face,Scary Face,early_no_core,4,HIGH SYNERGY,78.53,1,buy_signal
+j_scary_face,Scary Face,early_with_core,4,LOW VALUE,51.4,0,low_value
+j_scary_face,Scary Face,mid_flush_core,4,LOW VALUE,51.4,0,low_value
+j_scholar,Scholar,early_no_core,4,HIGH SYNERGY,171.76,1,buy_signal
+j_scholar,Scholar,early_with_core,4,HIGH SYNERGY,134.93,1,buy_signal
+j_scholar,Scholar,mid_flush_core,4,HIGH SYNERGY,134.93,1,buy_signal
+j_seance,Seance,early_no_core,6,BAD SYNERGY,122.94,0,bad_synergy
+j_seance,Seance,early_with_core,6,BAD SYNERGY,101.65,0,bad_synergy
+j_seance,Seance,mid_flush_core,6,BAD SYNERGY,101.65,0,bad_synergy
+j_seeing_double,Seeing Double,early_no_core,6,BAD SYNERGY,120.0,0,bad_synergy
+j_seeing_double,Seeing Double,early_with_core,6,BAD SYNERGY,100.0,0,bad_synergy
+j_seeing_double,Seeing Double,mid_flush_core,6,BAD SYNERGY,100.0,0,bad_synergy
+j_selzer,Seltzer,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_selzer,Seltzer,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_selzer,Seltzer,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_shoot_the_moon,Shoot the Moon,early_no_core,5,HIGH SYNERGY,367.65,1,buy_signal
+j_shoot_the_moon,Shoot the Moon,early_with_core,5,HIGH SYNERGY,325.21,1,buy_signal
+j_shoot_the_moon,Shoot the Moon,mid_flush_core,5,HIGH SYNERGY,325.21,1,buy_signal
+j_shortcut,Shortcut,early_no_core,7,BAD SYNERGY,10.0,0,bad_synergy
+j_shortcut,Shortcut,early_with_core,7,BAD SYNERGY,0.0,0,bad_synergy
+j_shortcut,Shortcut,mid_flush_core,7,BAD SYNERGY,0.0,0,bad_synergy
+j_sixth_sense,Sixth Sense,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_sixth_sense,Sixth Sense,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_sixth_sense,Sixth Sense,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_sly,Sly Joker,early_no_core,3,BAD SYNERGY,74.71,0,bad_synergy
+j_sly,Sly Joker,early_with_core,3,BAD SYNERGY,43.49,0,bad_synergy
+j_sly,Sly Joker,mid_flush_core,3,BAD SYNERGY,43.49,0,bad_synergy
+j_smeared,Smeared Joker,early_no_core,7,BAD SYNERGY,150.0,0,bad_synergy
+j_smeared,Smeared Joker,early_with_core,7,BAD SYNERGY,126.36,0,bad_synergy
+j_smeared,Smeared Joker,mid_flush_core,7,BAD SYNERGY,126.36,0,bad_synergy
+j_smiley,Smiley Face,early_no_core,4,HIGH SYNERGY,197.06,1,buy_signal
+j_smiley,Smiley Face,early_with_core,4,HIGH SYNERGY,170.02,1,buy_signal
+j_smiley,Smiley Face,mid_flush_core,4,HIGH SYNERGY,170.02,1,buy_signal
+j_sock_and_buskin,Sock and Buskin,early_no_core,6,HIGH SYNERGY,32.06,0,early_reserve_block
+j_sock_and_buskin,Sock and Buskin,early_with_core,6,MODERATE VALUE,20.1,1,buy_signal
+j_sock_and_buskin,Sock and Buskin,mid_flush_core,6,MODERATE VALUE,20.1,1,buy_signal
+j_space,Space Joker,early_no_core,5,BAD SYNERGY,10.0,0,bad_synergy
+j_space,Space Joker,early_with_core,5,BAD SYNERGY,0.0,0,bad_synergy
+j_space,Space Joker,mid_flush_core,5,BAD SYNERGY,0.0,0,bad_synergy
+j_splash,Splash,early_no_core,3,MODERATE VALUE,10.0,0,early_reserve_block
+j_splash,Splash,early_with_core,3,LOW VALUE,0.0,0,low_value
+j_splash,Splash,mid_flush_core,3,LOW VALUE,0.0,0,low_value
+j_square,Square Joker,early_no_core,4,BAD SYNERGY,15.29,0,bad_synergy
+j_square,Square Joker,early_with_core,4,BAD SYNERGY,3.46,0,bad_synergy
+j_square,Square Joker,mid_flush_core,4,BAD SYNERGY,3.46,0,bad_synergy
+j_steel_joker,Steel Joker,early_no_core,7,LOW VALUE,0.0,0,low_value
+j_steel_joker,Steel Joker,early_with_core,7,LOW VALUE,0.0,0,low_value
+j_steel_joker,Steel Joker,mid_flush_core,7,LOW VALUE,0.0,0,low_value
+j_stencil,Joker Stencil,early_no_core,8,MODERATE VALUE,10.0,1,buy_signal
+j_stencil,Joker Stencil,early_with_core,8,LOW VALUE,0.0,0,low_value
+j_stencil,Joker Stencil,mid_flush_core,8,LOW VALUE,0.0,0,low_value
+j_stone,Stone Joker,early_no_core,6,HIGH SYNERGY,42.35,1,buy_signal
+j_stone,Stone Joker,early_with_core,6,MODERATE VALUE,21.75,1,buy_signal
+j_stone,Stone Joker,mid_flush_core,6,MODERATE VALUE,21.75,1,buy_signal
+j_stuntman,Stuntman,early_no_core,7,HIGH SYNERGY,333.53,1,buy_signal
+j_stuntman,Stuntman,early_with_core,7,HIGH SYNERGY,217.46,1,buy_signal
+j_stuntman,Stuntman,mid_flush_core,7,HIGH SYNERGY,217.46,1,buy_signal
+j_supernova,Supernova,early_no_core,5,MODERATE VALUE,10.0,1,buy_signal
+j_supernova,Supernova,early_with_core,5,LOW VALUE,0.0,0,low_value
+j_supernova,Supernova,mid_flush_core,5,LOW VALUE,0.0,0,low_value
+j_superposition,Superposition,early_no_core,4,BAD SYNERGY,10.0,0,bad_synergy
+j_superposition,Superposition,early_with_core,4,BAD SYNERGY,0.0,0,bad_synergy
+j_superposition,Superposition,mid_flush_core,4,BAD SYNERGY,0.0,0,bad_synergy
+j_swashbuckler,Swashbuckler,early_no_core,4,MODERATE VALUE,10.0,1,buy_signal
+j_swashbuckler,Swashbuckler,early_with_core,4,LOW VALUE,0.0,0,low_value
+j_swashbuckler,Swashbuckler,mid_flush_core,4,LOW VALUE,0.0,0,low_value
+j_throwback,Throwback,early_no_core,6,LOW VALUE,0.0,0,low_value
+j_throwback,Throwback,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_throwback,Throwback,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_ticket,Golden Ticket,early_no_core,5,MODERATE VALUE,10.0,0,early_reserve_block
+j_ticket,Golden Ticket,early_with_core,5,LOW VALUE,0.0,0,low_value
+j_ticket,Golden Ticket,mid_flush_core,5,LOW VALUE,0.0,0,low_value
+j_to_the_moon,To the Moon,early_no_core,5,MODERATE VALUE,10.0,0,early_reserve_block
+j_to_the_moon,To the Moon,early_with_core,5,LOW VALUE,0.0,0,low_value
+j_to_the_moon,To the Moon,mid_flush_core,5,LOW VALUE,0.0,0,low_value
+j_todo_list,To Do List,early_no_core,4,MODERATE VALUE,10.0,0,early_reserve_block
+j_todo_list,To Do List,early_with_core,4,LOW VALUE,0.0,0,low_value
+j_todo_list,To Do List,mid_flush_core,4,LOW VALUE,0.0,0,low_value
+j_trading,Trading Card,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_trading,Trading Card,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_trading,Trading Card,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_tribe,The Tribe,early_no_core,8,HIGH SYNERGY,342.94,1,buy_signal
+j_tribe,The Tribe,early_with_core,8,HIGH SYNERGY,301.81,1,buy_signal
+j_tribe,The Tribe,mid_flush_core,8,HIGH SYNERGY,301.81,1,buy_signal
+j_triboulet,Triboulet,early_no_core,20,HIGH SYNERGY,120.0,0,insufficient_funds
+j_triboulet,Triboulet,early_with_core,20,HIGH SYNERGY,100.0,1,buy_signal
+j_triboulet,Triboulet,mid_flush_core,20,HIGH SYNERGY,100.0,1,buy_signal
+j_trio,The Trio,early_no_core,8,BAD SYNERGY,230.0,0,bad_synergy
+j_trio,The Trio,early_with_core,8,BAD SYNERGY,200.16,0,bad_synergy
+j_trio,The Trio,mid_flush_core,8,BAD SYNERGY,200.16,0,bad_synergy
+j_troubadour,Troubadour,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_troubadour,Troubadour,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_troubadour,Troubadour,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_trousers,Spare Trousers,early_no_core,6,BAD SYNERGY,65.0,0,bad_synergy
+j_trousers,Spare Trousers,early_with_core,6,BAD SYNERGY,50.08,0,bad_synergy
+j_trousers,Spare Trousers,mid_flush_core,6,BAD SYNERGY,50.08,0,bad_synergy
+j_turtle_bean,Turtle Bean,early_no_core,6,MODERATE VALUE,10.0,0,early_reserve_block
+j_turtle_bean,Turtle Bean,early_with_core,6,LOW VALUE,0.0,0,low_value
+j_turtle_bean,Turtle Bean,mid_flush_core,6,LOW VALUE,0.0,0,low_value
+j_vagabond,Vagabond,early_no_core,8,BAD SYNERGY,10.0,0,bad_synergy
+j_vagabond,Vagabond,early_with_core,8,BAD SYNERGY,0.0,0,bad_synergy
+j_vagabond,Vagabond,mid_flush_core,8,BAD SYNERGY,0.0,0,bad_synergy
+j_vampire,Vampire,early_no_core,7,LOW VALUE,0.0,0,low_value
+j_vampire,Vampire,early_with_core,7,LOW VALUE,0.0,0,low_value
+j_vampire,Vampire,mid_flush_core,7,LOW VALUE,0.0,0,low_value
+j_walkie_talkie,Walkie Talkie,early_no_core,4,HIGH SYNERGY,145.88,1,buy_signal
+j_walkie_talkie,Walkie Talkie,early_with_core,4,HIGH SYNERGY,117.46,1,buy_signal
+j_walkie_talkie,Walkie Talkie,mid_flush_core,4,HIGH SYNERGY,117.46,1,buy_signal
+j_wee,Wee Joker,early_no_core,8,MODERATE VALUE,20.29,1,buy_signal
+j_wee,Wee Joker,early_with_core,8,HIGH SYNERGY,6.92,1,buy_signal
+j_wee,Wee Joker,mid_flush_core,8,HIGH SYNERGY,6.92,1,buy_signal
+j_wily,Wily Joker,early_no_core,4,BAD SYNERGY,139.41,0,bad_synergy
+j_wily,Wily Joker,early_with_core,4,BAD SYNERGY,86.99,0,bad_synergy
+j_wily,Wily Joker,mid_flush_core,4,BAD SYNERGY,86.99,0,bad_synergy
+j_wrathful_joker,Wrathful Joker,early_no_core,5,HIGH SYNERGY,232.35,1,buy_signal
+j_wrathful_joker,Wrathful Joker,early_with_core,5,HIGH SYNERGY,201.48,1,buy_signal
+j_wrathful_joker,Wrathful Joker,mid_flush_core,5,HIGH SYNERGY,201.48,1,buy_signal
+j_yorick,Yorick,early_no_core,20,MODERATE VALUE,10.0,0,insufficient_funds
+j_yorick,Yorick,early_with_core,20,LOW VALUE,0.0,0,low_value
+j_yorick,Yorick,mid_flush_core,20,LOW VALUE,0.0,0,low_value
+j_zany,Zany Joker,early_no_core,4,BAD SYNERGY,340.0,0,bad_synergy
+j_zany,Zany Joker,early_with_core,4,BAD SYNERGY,300.16,0,bad_synergy
+j_zany,Zany Joker,mid_flush_core,4,BAD SYNERGY,300.16,0,bad_synergy

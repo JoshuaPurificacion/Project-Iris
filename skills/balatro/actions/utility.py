@@ -14,7 +14,7 @@ def _extract_enhancement_from_effect(effect: str) -> str | None:
 
     Returns the enhancement name in uppercase, or None if no match.
     """
-    match = re.search(r'to (\w+) Cards?', effect, re.IGNORECASE)
+    match = re.search(r"to (\w+) Cards?", effect, re.IGNORECASE)
     return match.group(1).upper() if match else None
 
 
@@ -41,6 +41,20 @@ def _get_consumable_cards(raw_state: dict) -> list[dict]:
     return []
 
 
+def _can_sell_in_state(current_state: str) -> bool:
+    """Return True when sell is likely valid for the current RPC state."""
+    state = (current_state or "").lower()
+    blocked_tokens = ("round_eval", "blind", "menu", "game_over", "pack", "booster")
+    if any(token in state for token in blocked_tokens):
+        return False
+    return (
+        ("shop" in state)
+        or ("selecting_hand" in state)
+        or ("play" in state)
+        or ("hand" in state)
+    )
+
+
 class SellJokerAction(BaseAction):
     """Execute sell_joker action."""
 
@@ -65,6 +79,15 @@ class SellJokerAction(BaseAction):
 
         # Check bounds
         raw_state = ctx.tick_context.raw_state
+        current_state = (raw_state.get("state", "") or "").lower()
+        if not _can_sell_in_state(current_state):
+            error = (
+                f"sell_joker blocked in state '{current_state}'. "
+                "Sell is only valid while selecting/playing a hand or in shop."
+            )
+            self._log_error(ctx, error)
+            return ActionResult(succeeded=False, error=error, persona_reasoning="")
+
         jokers = raw_state.get("jokers", {}).get("cards", [])
         if not (0 <= idx < len(jokers)):
             error = (
@@ -80,11 +103,18 @@ class SellJokerAction(BaseAction):
         deck_name = (
             ctx.session.run_profile.get("deck", "") if ctx.session.run_profile else ""
         )
+        hand_levels = raw_state.get("hand_levels")
+        planet_levels = raw_state.get("planet_levels")
+        hand_levels_map = hand_levels if isinstance(hand_levels, dict) else None
+        planet_levels_map = planet_levels if isinstance(planet_levels, dict) else None
         safe_sells = BalatroAlgorithm.identify_safe_sell_jokers(
             jokers,
             hand_cards,
             deck_name=deck_name,
             tolerance_pct=2.5,
+            current_money=int(raw_state.get("money", 0) or 0),
+            max_jokers=int((raw_state.get("jokers") or {}).get("size", 5) or 5),
+            deck_state=raw_state,
         )
         safe_indices = {int(row.get("index", 0)) for row in safe_sells}
         selected_idx_1b = idx + 1
@@ -101,6 +131,8 @@ class SellJokerAction(BaseAction):
                         hand_cards,
                         deck_name=deck_name,
                         deck_state=raw_state,
+                        hand_levels=hand_levels_map,
+                        planet_levels=planet_levels_map,
                     )
                     replace_idx = impact.get("replacement_index")
                     delta_pct = float(impact.get("delta_pct", 0.0))
@@ -113,7 +145,11 @@ class SellJokerAction(BaseAction):
                         break
 
             if not allow_for_upgrade:
-                name = jokers[idx].get("label") or jokers[idx].get("key") or f"Joker {selected_idx_1b}"
+                name = (
+                    jokers[idx].get("label")
+                    or jokers[idx].get("key")
+                    or f"Joker {selected_idx_1b}"
+                )
                 error = (
                     f"sell_joker blocked: {name} is high-impact for current scoring. "
                     "Sell a low-impact joker instead."
@@ -139,7 +175,10 @@ class SellJokerAction(BaseAction):
                 persona_reasoning=ctx.planner_output.get("reasoning", ""),
             )
         else:
-            error = "sell_joker API call failed."
+            api_error = (
+                getattr(ctx.controller.client, "last_error", "") or "Unknown API error"
+            )
+            error = f"sell_joker API call failed: {api_error}"
             self._log_error(ctx, error)
             return ActionResult(succeeded=False, error=error, persona_reasoning="")
 
@@ -168,6 +207,15 @@ class SellConsumableAction(BaseAction):
 
         # Check bounds
         raw_state = ctx.tick_context.raw_state
+        current_state = (raw_state.get("state", "") or "").lower()
+        if not _can_sell_in_state(current_state):
+            error = (
+                f"sell_consumable blocked in state '{current_state}'. "
+                "Sell is only valid while selecting/playing a hand or in shop."
+            )
+            self._log_error(ctx, error)
+            return ActionResult(succeeded=False, error=error, persona_reasoning="")
+
         consumables = _get_consumable_cards(raw_state)
         if not (0 <= idx < len(consumables)):
             error = f"sell_consumable index {args[0]} is out of bounds for {len(consumables)} consumables."
@@ -188,7 +236,10 @@ class SellConsumableAction(BaseAction):
                 persona_reasoning=ctx.planner_output.get("reasoning", ""),
             )
         else:
-            error = "sell_consumable API call failed."
+            api_error = (
+                getattr(ctx.controller.client, "last_error", "") or "Unknown API error"
+            )
+            error = f"sell_consumable API call failed: {api_error}"
             self._log_error(ctx, error)
             return ActionResult(succeeded=False, error=error, persona_reasoning="")
 
@@ -286,7 +337,9 @@ class UseConsumableAction(BaseAction):
                         f"'{applied_enh}' enhanced. Choose cards without that enhancement."
                     )
                     self._log_error(ctx, error)
-                    return ActionResult(succeeded=False, error=error, persona_reasoning="")
+                    return ActionResult(
+                        succeeded=False, error=error, persona_reasoning=""
+                    )
 
         # Execute use
         log_system(
@@ -302,10 +355,16 @@ class UseConsumableAction(BaseAction):
             ctx.controller.refresh_state()
             ctx.tick_context.update_raw_state(ctx.controller.raw_state)
 
-            remaining = ctx.controller.raw_state.get("consumeables", {}).get("cards", [])
+            remaining = ctx.controller.raw_state.get("consumeables", {}).get(
+                "cards", []
+            )
             log_system(
                 f"[Balatro] Consumables remaining after use: {len(remaining)}"
-                + (f" — {[c.get('label', '?') for c in remaining]}" if remaining else "")
+                + (
+                    f" — {[c.get('label', '?') for c in remaining]}"
+                    if remaining
+                    else ""
+                )
             )
 
             self._log_success(ctx, f"used consumable at index {args[0]}")

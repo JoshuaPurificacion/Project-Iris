@@ -90,6 +90,7 @@ Project Iris is a fully offline, locally-run AI VTuber built for a university en
 - **GPU:** NVIDIA RTX 4050 (6GB VRAM) — 15 layers offloaded
 - **RAM:** 16GB recommended (runs at ~60% usage)
 - **OS:** Windows 11
+- **Python:** 3.12+
 - **Hardware:** ESP32-CAM OmniSense pet feeder (optional)
 - **Network:** Phone hotspot (OmniSense connects to this)
 

@@ -3,7 +3,7 @@
 Usage:
     python scripts/analyze_telemetry.py
 
-Reads all .jsonl files in logs/balatro/ and computes run statistics.
+Reads all .jsonl files in logs/balatro/ and computes run + operations statistics.
 Corrupted lines and missing-field rows are silently skipped so that
 disk I/O errors never pollute the metric averages.
 """
@@ -11,6 +11,7 @@ disk I/O errors never pollute the metric averages.
 import collections
 import json
 import os
+from typing import Iterable
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -21,23 +22,23 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.dirname(_SCRIPT_DIR)
 TELEMETRY_DIR = os.path.join(_PROJECT_ROOT, "logs", "balatro")
 
-WIN_ANTE_THRESHOLD = 8   # Ante at which a run is counted as a win
-TOP_N = 5                # How many entries to show per ranked list
+WIN_ANTE_THRESHOLD = 8  # Ante at which a run is counted as a win
+TOP_N = 5  # How many entries to show per ranked list
 
 
 # ---------------------------------------------------------------------------
 # Data Loading
 # ---------------------------------------------------------------------------
 
-def _iter_records(telemetry_dir: str):
+
+def _iter_records(telemetry_dir: str) -> Iterable[dict]:
     """Yield parsed dicts from every valid .jsonl line in *telemetry_dir*.
 
     Silently skips:
     - Non-files (subdirectories, symlinks)
     - Non-.jsonl extensions
     - Lines that fail JSON parsing (truncated hard-kill writes)
-    - Lines that parse successfully but are missing 'ante_reached'
-      (required for all aggregations to stay mathematically clean)
+    - Rows that are not JSON objects
     """
     if not os.path.isdir(telemetry_dir):
         return
@@ -61,9 +62,7 @@ def _iter_records(telemetry_dir: str):
                     # Truncated line from a hard-killed session — skip cleanly.
                     continue
 
-                # Skip rows missing core metrics rather than defaulting to 0,
-                # which would silently corrupt Average Ante and Win Rate math.
-                if record.get("ante_reached") is None:
+                if not isinstance(record, dict):
                     continue
 
                 yield record
@@ -73,30 +72,69 @@ def _iter_records(telemetry_dir: str):
 # Metric Computation
 # ---------------------------------------------------------------------------
 
+
 def compute_metrics(telemetry_dir: str) -> dict:
     """Return a dict of all computed run statistics."""
     total_runs = 0
     wins = 0
     total_antes = 0
+    decision_events = 0
+    failed_decisions = 0
+    anomaly_events = 0
+    anomaly_delta_total = 0.0
+    gate_block_events = 0
     boss_counter: collections.Counter = collections.Counter()
     joker_counter: collections.Counter = collections.Counter()
+    anomaly_hand_counter: collections.Counter = collections.Counter()
+    gate_reason_counter: collections.Counter = collections.Counter()
+    gate_target_counter: collections.Counter = collections.Counter()
 
     for record in _iter_records(telemetry_dir):
-        total_runs += 1
+        event = str(record.get("event") or "").strip().lower()
 
-        ante = record["ante_reached"]   # guaranteed non-None by _iter_records
-        total_antes += ante
+        if event == "death":
+            ante = record.get("ante_reached")
+            if isinstance(ante, (int, float)):
+                total_runs += 1
+                total_antes += int(ante)
 
-        if ante >= WIN_ANTE_THRESHOLD:
-            wins += 1
+                if int(ante) >= WIN_ANTE_THRESHOLD:
+                    wins += 1
 
-        boss = record.get("boss_blind")
-        if boss:
-            boss_counter[boss] += 1
+                boss = record.get("boss_blind")
+                if boss:
+                    boss_counter[boss] += 1
 
-        for joker_name in record.get("jokers") or []:
-            if joker_name:
-                joker_counter[joker_name] += 1
+                for joker_name in record.get("jokers") or []:
+                    if joker_name:
+                        joker_counter[joker_name] += 1
+            continue
+
+        if event == "decision":
+            decision_events += 1
+            if not bool(record.get("api_success", False)):
+                failed_decisions += 1
+            continue
+
+        if event == "score_anomaly":
+            anomaly_events += 1
+            delta_pct = record.get("delta_pct")
+            if isinstance(delta_pct, (int, float)):
+                anomaly_delta_total += float(delta_pct)
+            hand_name = str(record.get("hand_name") or "").strip()
+            if hand_name:
+                anomaly_hand_counter[hand_name] += 1
+            continue
+
+        if event == "survival_gate_blocked":
+            gate_block_events += 1
+            reason = str(record.get("reason") or "").strip()
+            target = str(record.get("target_joker") or "").strip()
+            if reason:
+                gate_reason_counter[reason] += 1
+            if target:
+                gate_target_counter[target] += 1
+            continue
 
     # Guard against empty / fully-corrupted log directories
     if total_runs > 0:
@@ -106,19 +144,39 @@ def compute_metrics(telemetry_dir: str) -> dict:
         avg_ante = None
         win_rate = None
 
+    if anomaly_events > 0:
+        avg_anomaly_delta = anomaly_delta_total / anomaly_events
+    else:
+        avg_anomaly_delta = None
+
+    if decision_events > 0:
+        decision_fail_rate = (failed_decisions / decision_events) * 100.0
+    else:
+        decision_fail_rate = None
+
     return {
         "total_runs": total_runs,
         "wins": wins,
         "win_rate": win_rate,
         "avg_ante": avg_ante,
+        "decision_events": decision_events,
+        "failed_decisions": failed_decisions,
+        "decision_fail_rate": decision_fail_rate,
+        "anomaly_events": anomaly_events,
+        "avg_anomaly_delta": avg_anomaly_delta,
+        "gate_block_events": gate_block_events,
         "top_bosses": boss_counter.most_common(TOP_N),
         "top_jokers": joker_counter.most_common(TOP_N),
+        "top_anomaly_hands": anomaly_hand_counter.most_common(TOP_N),
+        "top_gate_reasons": gate_reason_counter.most_common(TOP_N),
+        "top_gate_targets": gate_target_counter.most_common(TOP_N),
     }
 
 
 # ---------------------------------------------------------------------------
 # Terminal Output
 # ---------------------------------------------------------------------------
+
 
 def print_dashboard(metrics: dict) -> None:
     """Print a formatted markdown-style dashboard to stdout."""
@@ -141,6 +199,49 @@ def print_dashboard(metrics: dict) -> None:
             f" ({metrics['wins']} Win{'s' if metrics['wins'] != 1 else ''})"
         )
         print(f"Average Ante:        {metrics['avg_ante']:.1f}")
+
+    print()
+    print("--- OPERATIONAL HEALTH ---")
+    decisions = metrics["decision_events"]
+    failures = metrics["failed_decisions"]
+    print(f"Decision Events:      {decisions}")
+    print(f"Failed Decisions:     {failures}")
+    if metrics["decision_fail_rate"] is None:
+        print("Decision Fail Rate:   N/A")
+    else:
+        print(f"Decision Fail Rate:   {metrics['decision_fail_rate']:.1f}%")
+    print(f"Score Anomalies:      {metrics['anomaly_events']}")
+    if metrics["avg_anomaly_delta"] is None:
+        print("Avg Anomaly Drift:    N/A")
+    else:
+        print(f"Avg Anomaly Drift:    {metrics['avg_anomaly_delta']:.1f}%")
+    print(f"Survival Gate Blocks: {metrics['gate_block_events']}")
+
+    print()
+    print("--- TOP ANOMALY HANDS ---")
+    if metrics["top_anomaly_hands"]:
+        for rank, (name, count) in enumerate(metrics["top_anomaly_hands"], start=1):
+            print(
+                f"{rank:>2}. {name:<28} ({count} anomaly{'ies' if count != 1 else ''})"
+            )
+    else:
+        print("    No anomaly events recorded yet.")
+
+    print()
+    print("--- SURVIVAL GATE BLOCK REASONS ---")
+    if metrics["top_gate_reasons"]:
+        for rank, (name, count) in enumerate(metrics["top_gate_reasons"], start=1):
+            print(f"{rank:>2}. {name:<28} ({count} event{'s' if count != 1 else ''})")
+    else:
+        print("    No survival gate block reasons recorded yet.")
+
+    print()
+    print("--- MOST BLOCKED TARGET JOKERS ---")
+    if metrics["top_gate_targets"]:
+        for rank, (name, count) in enumerate(metrics["top_gate_targets"], start=1):
+            print(f"{rank:>2}. {name:<28} ({count} block{'s' if count != 1 else ''})")
+    else:
+        print("    No blocked target jokers recorded yet.")
 
     print()
     print("--- LETHAL BOSS BLINDS ---")

@@ -1,0 +1,305 @@
+{
+  "catalog_size": 150,
+  "scenario_count": 3,
+  "total_evaluations": 450,
+  "buy_count": 139,
+  "buy_rate_pct": 30.89,
+  "reason_counts": {
+    "buy_signal": 139,
+    "low_value": 132,
+    "bad_synergy": 129,
+    "early_reserve_block": 46,
+    "insufficient_funds": 4
+  },
+  "advisor_counts": {
+    "LOW VALUE": 133,
+    "BAD SYNERGY": 129,
+    "HIGH SYNERGY": 122,
+    "MODERATE VALUE": 66
+  },
+  "top_20_buy_rate": [
+    {
+      "joker_key": "j_abstract",
+      "joker_name": "Abstract Joker",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_acrobat",
+      "joker_name": "Acrobat",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_ancient",
+      "joker_name": "Ancient Joker",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_arrowhead",
+      "joker_name": "Arrowhead",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_banner",
+      "joker_name": "Banner",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_baron",
+      "joker_name": "Baron",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_baseball",
+      "joker_name": "Baseball Card",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_blue_joker",
+      "joker_name": "Blue Joker",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_bootstraps",
+      "joker_name": "Bootstraps",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_bull",
+      "joker_name": "Bull",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_card_sharp",
+      "joker_name": "Card Sharp",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_castle",
+      "joker_name": "Castle",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_crafty",
+      "joker_name": "Crafty Joker",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_drivers_license",
+      "joker_name": "Driver",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_droll",
+      "joker_name": "Droll Joker",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_erosion",
+      "joker_name": "Erosion",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_even_steven",
+      "joker_name": "Even Steven",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_family",
+      "joker_name": "The Family",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_fibonacci",
+      "joker_name": "Fibonacci",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_flash",
+      "joker_name": "Flash Card",
+      "buy_rate_pct": 100.0,
+      "buy_count": 3,
+      "evaluations": 3
+    }
+  ],
+  "bottom_20_buy_rate": [
+    {
+      "joker_key": "j_8_ball",
+      "joker_name": "8 Ball",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_astronomer",
+      "joker_name": "Astronomer",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_blackboard",
+      "joker_name": "Blackboard",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_bloodstone",
+      "joker_name": "Bloodstone",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_blueprint",
+      "joker_name": "Blueprint",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_brainstorm",
+      "joker_name": "Brainstorm",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_burglar",
+      "joker_name": "Burglar",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_burnt",
+      "joker_name": "Burnt Joker",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_business",
+      "joker_name": "Business Card",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_campfire",
+      "joker_name": "Campfire",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_cartomancer",
+      "joker_name": "Cartomancer",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_cavendish",
+      "joker_name": "Cavendish",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_certificate",
+      "joker_name": "Certificate",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_chaos",
+      "joker_name": "Chaos the Clown",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_chicot",
+      "joker_name": "Chicot",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_clever",
+      "joker_name": "Clever Joker",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_cloud_9",
+      "joker_name": "Cloud 9",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_constellation",
+      "joker_name": "Constellation",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_crazy",
+      "joker_name": "Crazy Joker",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    },
+    {
+      "joker_key": "j_credit_card",
+      "joker_name": "Credit Card",
+      "buy_rate_pct": 0.0,
+      "buy_count": 0,
+      "evaluations": 3
+    }
+  ],
+  "csv_path": "C:\\Users\\Josh\\Documents\\Project-Iris\\scripts\\joker_buy_audit.csv"
+}

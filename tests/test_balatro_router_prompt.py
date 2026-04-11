@@ -39,7 +39,12 @@ def test_shop_directive_allows_actions_when_inventory_exists():
     state["round"] = {"reroll_cost": 5}
     state["shop"] = {
         "cards": [
-            {"label": "Neptune", "key": "c_neptune", "value": {"effect": ""}, "cost": {"buy": 3}}
+            {
+                "label": "Neptune",
+                "key": "c_neptune",
+                "value": {"effect": ""},
+                "cost": {"buy": 3},
+            }
         ]
     }
 
@@ -113,6 +118,14 @@ def test_planner_system_prompt_includes_synergy_evaluation_first():
     assert synergy_pos != -1
     assert action_pos != -1
     assert synergy_pos < action_pos
+
+
+def test_planner_system_prompt_warns_field_names_are_not_actions():
+    assert "JSON key names are not actions" in PLANNER_SYSTEM_PROMPT
+    assert (
+        'Never set action to "indices", "reasoning", or "synergy_evaluation"'
+        in PLANNER_SYSTEM_PROMPT
+    )
 
 
 def test_prompt_builder_keeps_real_joker_effect_text_in_context():

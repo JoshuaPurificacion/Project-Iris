@@ -1,5 +1,6 @@
 import dataclasses
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
+from .utils import _get_state_cards, _safe_int
 
 if TYPE_CHECKING:
     from .session import TickContext
@@ -30,7 +31,7 @@ class PhaseRouter:
     """Stateless router that evaluates TickContext to determine current phase."""
 
     @staticmethod
-    def get_directive(tick_context: "TickContext") -> Optional[PhaseDirective]:
+    def get_directive(tick_context: "TickContext") -> PhaseDirective | None:
         """Return the PhaseDirective for the current game state."""
         raw_state = tick_context.raw_state
         current_state = (raw_state.get("state", "") or "").lower()
@@ -70,12 +71,9 @@ class PhaseRouter:
             phase_id="menu",
             allowed_actions=["start_run"],
             guidance=(
-                "Pick a deck to start a new run. "
-                f"CRITICAL: You MUST output a 'deck' field with your chosen deck name. "
-                "STRATEGIC GOAL: ALWAYS choose CHECKERED for consistent flush-based clears. "
-                "Do not experiment with other decks for now. "
-                "Populate the 'deck' field with CHECKERED. "
-                f"Leave indices empty."
+                "Start a new run immediately. "
+                "STRATEGIC GOAL: CHECKERED-only consistency mode is enforced by backend. "
+                "Output action='start_run' with empty indices."
             ),
         )
 
@@ -84,12 +82,10 @@ class PhaseRouter:
         """Blind selection directive."""
         return PhaseDirective(
             phase_id="blind",
-            allowed_actions=["select", "skip_blind", "skip"],
+            allowed_actions=["select"],
             guidance=(
                 "ALWAYS select the blind. Output action='select' with empty indices. "
-                "NOTE: The tag shown next to a blind (e.g. 'Rare Joker Tag') is a SKIP reward — "
-                "you only get it by using skip_blind, NOT by selecting. "
-                "Always select regardless of what tag is shown."
+                "Do not skip blinds."
             ),
         )
 
@@ -98,21 +94,36 @@ class PhaseRouter:
         """Round evaluation directive."""
         return PhaseDirective(
             phase_id="round_eval",
-            allowed_actions=["cash_out", "cashout", "cash"],
-            guidance="Round over. Cash out immediately.",
+            allowed_actions=["cash_out"],
+            # Override utility_actions to remove use_consumable — the game API
+            # does not allow it during round_eval and it causes softlocks.
+            utility_actions=[
+                "sell_joker",
+                "sell_consumable",
+                "rearrange_joker",
+                "rearrange_consumable",
+            ],
+            guidance=(
+                "ROUND EVALUATION: You just beat the blind. "
+                "The shop is not open yet. "
+                "Output action='cash_out' with empty indices immediately. "
+                "Do NOT attempt buy_shop, reroll, use_consumable, or any shop action."
+            ),
         )
 
     @staticmethod
     def _get_shop_directive(tick_context: "TickContext", ante: int) -> PhaseDirective:
         """Shop directive with early/mid/late game guidance."""
-        from .session import (
+        from .shop_analysis import (
             _has_survival_joker,
-            _get_state_cards,
+            _count_survival_jokers,
+            _is_buffoon_pack,
+            _extract_advisor_core,
             _summarize_shop_item,
             _format_shop_item_summary,
-            _safe_int,
             EARLY_GAME_ANTE_LIMIT,
             EARLY_GAME_INTEREST_RESERVE,
+            CONSUMABLE_EXCEPTION_FLOOR,
         )
         from core.logger import log_system
 
@@ -120,7 +131,7 @@ class PhaseRouter:
 
         # --- Log all current shop items ---
         shop_cards = _get_state_cards(raw_state, "shop")
-        deck_name = ""  # deck not needed for label/cost display here
+        deck_name = str(raw_state.get("deck") or "")
         if shop_cards:
             lines = []
             for i, card in enumerate(shop_cards, start=1):
@@ -132,7 +143,25 @@ class PhaseRouter:
         has_survival_joker = _has_survival_joker(raw_state)
 
         pack_cards = _get_state_cards(raw_state, "packs")
+        if pack_cards:
+            pack_lines = []
+            for i, card in enumerate(pack_cards, start=1):
+                summary = _summarize_shop_item(card, raw_state, deck_name)
+                pack_lines.append(f"  [{i}] {_format_shop_item_summary(summary)}")
+            log_system("[Balatro] Booster Packs:\n" + "\n".join(pack_lines))
+        else:
+            log_system("[Balatro] Booster Packs: (empty)")
+
         voucher_cards = _get_state_cards(raw_state, "vouchers")
+        if voucher_cards:
+            voucher_lines = []
+            for i, card in enumerate(voucher_cards, start=1):
+                summary = _summarize_shop_item(card, raw_state, deck_name)
+                voucher_lines.append(f"  [{i}] {_format_shop_item_summary(summary)}")
+            log_system("[Balatro] Vouchers:\n" + "\n".join(voucher_lines))
+        else:
+            log_system("[Balatro] Vouchers: (empty)")
+
         consumable_cards = _get_state_cards(raw_state, "consumeables")
         money = _safe_int(raw_state.get("money"), 0)
         round_info = raw_state.get("round") or {}
@@ -147,46 +176,75 @@ class PhaseRouter:
         can_buy_pack = bool(pack_cards)
         can_buy_voucher = bool(voucher_cards)
         can_use_consumable = bool(consumable_cards)
+        survival_count = _count_survival_jokers(raw_state)
+        has_early_buffoon_pack = ante <= EARLY_GAME_ANTE_LIMIT and any(
+            _is_buffoon_pack(card) for card in pack_cards
+        )
+
+        shop_summaries = [
+            _summarize_shop_item(card, raw_state, deck_name) for card in shop_cards
+        ]
+        has_bad_synergy_item = any(
+            _extract_advisor_core(str(summary.get("advisor") or "")) == "BAD SYNERGY"
+            for summary in shop_summaries
+        )
+        all_bad_or_low_shop = bool(shop_summaries) and all(
+            _extract_advisor_core(str(summary.get("advisor") or ""))
+            in ("BAD SYNERGY", "LOW VALUE", "SITUATIONAL", "")
+            for summary in shop_summaries
+        )
 
         if ante <= EARLY_GAME_ANTE_LIMIT and not has_survival_joker:
             guidance = (
-                f"EARLY GAME: If you do NOT already own a survival Joker, buy one "
-                f"Joker that directly adds Chips, Mult, or xMult, even if it "
-                f"drops you below ${EARLY_GAME_INTEREST_RESERVE}. "
+                "EARLY GAME PRIORITY: Rule 1 survive next blind. Rule 2 keep $25+ interest when possible. "
+                f"You currently have {survival_count} scoring Jokers. "
+                "If a Buffoon pack is available, prioritize it immediately to find Chips/Mult/xMult support. "
+                "If no Buffoon is available, buy the best available scoring upgrade now. "
+                f"You may dip below ${EARLY_GAME_INTEREST_RESERVE} for survival-critical upgrades. "
                 f"CRITICAL: To buy, you MUST use action 'buy_shop' and put the 1-based item number in the 'indices' array (e.g., indices: [1]). "
-                f"After that first survival Joker, protect "
-                f"${EARLY_GAME_INTEREST_RESERVE} and spend only the excess above it "
-                "on build Jokers. If joker slots are full, sell_joker a low-impact joker first, then buy the upgrade. "
-                "If nothing good fits the excess budget, use reroll if affordable, else continue."
+                "Respect item tags: [SAFE TO BUY], [CRITICAL UPGRADE], [COSTS INTEREST]. "
+                "If joker slots are full, sell only jokers tagged [SAFE TO SELL] before buying upgrades."
             )
         elif ante <= EARLY_GAME_ANTE_LIMIT:
             guidance = (
-                f"EARLY GAME: You already have a survival Joker. Keep at least "
-                f"${EARLY_GAME_INTEREST_RESERVE} banked and spend the excess above it. "
-                "SPENDING ORDER: (1) Buy Jokers that add Chips, Mult, or xMult. (2) Buy packs if affordable. (3) Reroll if you have excess money and still need better jokers. "
-                "If joker slots are full, sell_joker only low-impact jokers to make room for stronger upgrades. "
+                "EARLY GAME: Rule 1 survive next blind, Rule 2 maintain $25+ when possible. "
+                f"Interest target is ${EARLY_GAME_INTEREST_RESERVE}, but survival upgrades can dip lower. "
+                "SPENDING ORDER: (1) vouchers, (2) packs (including Tarot/Planet sources), (3) Tarot/Planet support cards, (4) scoring Joker upgrades, (5) reroll only when no good non-rerollables remain. "
+                f"Consumable exception: you may dip to ${CONSUMABLE_EXCEPTION_FLOOR} for impactful Tarot/Planet buys. "
+                "NON-REROLLABLE PRIORITY: if an affordable voucher or pack exists, buy it before buy_shop or reroll unless the Joker is a [CRITICAL UPGRADE]. "
+                "If joker slots are full, sell_joker only cards marked [SAFE TO SELL]. "
                 "CRITICAL: To buy a shop item, use action 'buy_shop' with 1-based index (e.g., indices: [1]). "
                 "To buy a pack, use action 'buy_pack' with 1-based index (e.g., indices: [1]). "
                 "You may also use non-targeted consumables (Planets, Hermit, etc) using action 'use_consumable' with just its index. Do NOT use targeted consumables outside of blinds. "
-                "If nothing good fits the budget, use reroll or continue."
+                "If all shop cards are low/bad and reroll keeps economy floor, reroll is valid."
             )
         else:
             guidance = (
-                "MID/LATE GAME: Keep at least $25 for max interest. "
-                "SPENDING ORDER: (1) Use any Tarot/Planet consumables you have for free value - Planets scale your most-played hand, Tarots give economy/synergy. "
-                "(2) Buy Planet card matching your highest-scoring hand type. (3) Buy Tarot cards. "
-                "(4) Spend excess on Joker builds (xMult, Chips, Mult). (5) Buy packs if affordable. "
-                "(6) Reroll shop if sitting on $25+ and need to optimize Joker loadout. "
-                "If joker slots are full, sell_joker only when replacing with a higher-impact joker. "
+                "MID/LATE GAME: Rule 1 survive next blind. Rule 2 keep $25+ interest when possible. "
+                "Use item tags to choose buys: [SAFE TO BUY] first, then [CRITICAL UPGRADE] when survival/scaling needs it, and avoid [COSTS INTEREST] unless needed. "
+                "SPENDING ORDER: (1) vouchers, (2) packs, (3) Tarot/Planet support, (4) strongest Joker upgrade, (5) reroll only when no good non-rerollables remain. "
+                f"You may dip to ${CONSUMABLE_EXCEPTION_FLOOR} for impactful Tarot/Planet cards. "
+                "NON-REROLLABLE PRIORITY: if an affordable voucher or pack exists, buy it before buy_shop or reroll unless the Joker is a [CRITICAL UPGRADE]. "
+                "If joker slots are full, swap only via jokers tagged [SAFE TO SELL]. "
                 "CRITICAL: To buy a pack, use action 'buy_pack' with 1-based index (e.g., indices: [1]). "
                 "To use consumables, use action 'use_consumable' with index (e.g., indices: [1]). "
                 "You may also use non-targeted consumables (Planets, Hermit, etc) using action 'use_consumable' with just its index. Do NOT use targeted consumables outside of blinds. "
                 "To reroll the shop, use action 'reroll'."
             )
 
+        if has_early_buffoon_pack and survival_count == 0:
+            guidance += " URGENT: No scoring Joker online yet and Buffoon is available - buy_pack now."
+        if has_bad_synergy_item:
+            guidance += " BAD SYNERGY items are hard-blocked by backend; never pick them and skip them entirely."
+            guidance += " Unreliable chance/random/self-destruct jokers are classified BAD SYNERGY for Checkered runs."
+        if all_bad_or_low_shop:
+            guidance += " Shop quality is weak overall; reroll is preferred when economy floor allows."
+
         availability_rules: list[str] = []
         if not can_buy_shop:
-            availability_rules.append("No shop cards available. Do NOT output buy_shop.")
+            availability_rules.append(
+                "No shop cards available. Do NOT output buy_shop."
+            )
         if not can_buy_pack:
             availability_rules.append("No packs available. Do NOT output buy_pack.")
         if not can_buy_voucher:
@@ -199,7 +257,13 @@ class PhaseRouter:
             )
 
         no_shop_progression_action = not any(
-            [can_buy_shop, can_buy_pack, can_buy_voucher, can_reroll, can_use_consumable]
+            [
+                can_buy_shop,
+                can_buy_pack,
+                can_buy_voucher,
+                can_reroll,
+                can_use_consumable,
+            ]
         )
         if no_shop_progression_action:
             availability_rules.append(

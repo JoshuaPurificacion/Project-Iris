@@ -28,6 +28,7 @@ class ContinueAction(BaseAction):
     def _handle_round_eval(self, ctx: ActionContext) -> ActionResult:
         """Handle continue in ROUND_EVAL state (cash out)."""
         import time
+
         log_system("[Balatro] Continue in ROUND_EVAL: cashing out.")
 
         # Retry up to 3 times — cash_out can fail transiently during scoring animation
@@ -35,14 +36,16 @@ class ContinueAction(BaseAction):
             cash_out_result = ctx.controller.client._call("cash_out")
             if cash_out_result is not None:
                 break
-            log_system(f"[Balatro] cash_out attempt {attempt}/3 failed, retrying in 2s...")
+            log_system(
+                f"[Balatro] cash_out attempt {attempt}/3 failed, retrying in 2s..."
+            )
             time.sleep(2.0)
 
         if cash_out_result is None:
-            # Last resort: force next_round to break the round_eval softlock
-            log_system("[Balatro] cash_out failed 3 times — forcing proceed_next to escape round_eval.")
-            ctx.controller.client.proceed_next()
-            error = "cash_out failed after 3 retries; forced proceed_next to escape."
+            api_error = (
+                getattr(ctx.controller.client, "last_error", "") or "Unknown API error"
+            )
+            error = f"cash_out failed after 3 retries: {api_error}"
             self._log_error(ctx, error)
             return ActionResult(succeeded=False, error=error, persona_reasoning="")
 
@@ -66,7 +69,10 @@ class ContinueAction(BaseAction):
                 persona_reasoning=ctx.planner_output.get("reasoning", ""),
             )
         else:
-            error = "next_round failed during continue."
+            api_error = (
+                getattr(ctx.controller.client, "last_error", "") or "Unknown API error"
+            )
+            error = f"next_round failed during continue: {api_error}"
             self._log_error(ctx, error)
             return ActionResult(succeeded=False, error=error, persona_reasoning="")
 
@@ -89,13 +95,16 @@ class ContinueAction(BaseAction):
                 persona_reasoning=ctx.planner_output.get("reasoning", ""),
             )
         else:
-            error = "select/skip failed during continue."
+            api_error = (
+                getattr(ctx.controller.client, "last_error", "") or "Unknown API error"
+            )
+            error = f"select/skip failed during continue: {api_error}"
             self._log_error(ctx, error)
             return ActionResult(succeeded=False, error=error, persona_reasoning="")
 
 
 class CashOutAction(BaseAction):
-    """Execute cash_out, cashout, or cash action."""
+    """Execute canonical cash_out action."""
 
     @property
     def name(self) -> str:
@@ -109,6 +118,7 @@ class CashOutAction(BaseAction):
             return ActionResult(succeeded=False, error=error, persona_reasoning="")
 
         import time
+
         log_system("[Balatro] Cashing out via action tag.")
 
         # Retry up to 3 times — cash_out can fail transiently during scoring animation
@@ -117,13 +127,16 @@ class CashOutAction(BaseAction):
             cash_out_result = ctx.controller.client._call("cash_out")
             if cash_out_result is not None:
                 break
-            log_system(f"[Balatro] cash_out attempt {attempt}/3 failed, retrying in 2s...")
+            log_system(
+                f"[Balatro] cash_out attempt {attempt}/3 failed, retrying in 2s..."
+            )
             time.sleep(2.0)
 
         if cash_out_result is None:
-            log_system("[Balatro] cash_out failed 3 times — forcing proceed_next to escape round_eval.")
-            ctx.controller.client.proceed_next()
-            error = "cash_out failed after 3 retries; forced proceed_next to escape."
+            api_error = (
+                getattr(ctx.controller.client, "last_error", "") or "Unknown API error"
+            )
+            error = f"cash_out failed after 3 retries: {api_error}"
             self._log_error(ctx, error)
             return ActionResult(succeeded=False, error=error, persona_reasoning="")
 
@@ -133,20 +146,3 @@ class CashOutAction(BaseAction):
             error=None,
             persona_reasoning=ctx.planner_output.get("reasoning", ""),
         )
-
-
-# Aliases for cashout and cash
-class CashoutAction(CashOutAction):
-    """Alias for cashout action (same as cash_out)."""
-
-    @property
-    def name(self) -> str:
-        return "cashout"
-
-
-class CashAction(CashOutAction):
-    """Alias for cash action (same as cash_out)."""
-
-    @property
-    def name(self) -> str:
-        return "cash"
