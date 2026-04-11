@@ -171,3 +171,27 @@ The final system is fully offline-capable, uses deterministic texture analysis i
 - `scripts/test_api_jokers.txt`
 - `ISSUES_LOG.md`
 - `DEVELOPMENT_LOG.md`
+
+---
+
+## Session Date: April 12, 2026
+
+### Focus: Balatro Ante 8 Fixes + Shop Economy Refactoring
+
+### Key Outcomes
+
+1. Fixed Reroll Infinite Loop: Blocked low-value jokers/vouchers from gating rerolls by requiring "HIGH SYNERGY" or "MODERATE VALUE" advisor tags.
+2. Economy Phase Transition: Changed flat interest reserve to scale dynamically with the ante, allowing late-game spending on survival instead of hoarding $25.
+3. Safe Sell Gating: Adjusted `tolerance_pct` parameter from 100% to 5% and required the replacement joker to improve the expected score by at least 8% before executing a swap.
+4. xMult Joker Valuation: Added `baseline_score` to evaluate late-game xMult Jokers exponentially, scaling linearly with the score delta they actually produce.
+5. Session Hand Type Commitment: Updated discard logic to track an explicit target hand type to ensure straight/flush draws align properly with session goals.
+6. Target Blind Margins: Implemented `BLIND_SAFETY_MARGIN_BY_ANTE` to scale down score estimator gate requirements gracefully from Ante 5 to Ante 8, allowing late game pivots.
+
+### Files Updated This Session
+
+- `skills/balatro/actions/shop.py`
+- `skills/balatro/shop_analysis.py`
+- `skills/balatro_bot/modules/algorithms.py`
+- `skills/balatro/session.py`
+- `skills/balatro/actions/play.py`
+- `skills/balatro/constants.py`

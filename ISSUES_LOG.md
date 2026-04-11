@@ -120,3 +120,37 @@ Fixed: Added is_speaking flag to block listening while TTS is playing.
 **Problem:** Needed a quick reproducible way to inspect current owned Jokers and shop Jokers with raw effect text.
 **Solution:** Added `scripts/inspect_jokers.py` to dump current owned/shop joker arrays into `scripts/test_api_jokers.txt` for prompt/debug verification.
 - Files: `scripts/inspect_jokers.py`, `scripts/test_api_jokers.txt`
+
+---
+
+## Session Date: April 12, 2026 (Balatro Ante 8 Fixes)
+
+### [RESOLVED] Reroll Infinite Loop in Shop
+**Problem:** The buy shop logic was incorrectly blocked from rerolling by low-value vouchers and packs, creating an infinite loop where the bot burned money on mediocre items instead of rerolling for Jokers.
+**Solution:** Raised the threshold in `_find_affordable_non_rerollable_option` to only block rerolls if the item is explicitly rated "HIGH SYNERGY" or "MODERATE VALUE".
+- Files: `skills/balatro/actions/shop.py`
+
+### [RESOLVED] Economy Model Never Transitions Out of Early Game
+**Problem:** A hard-coded $25 `EARLY_GAME_INTEREST_RESERVE` was used at all times. In late-game Antes (5+), money should be aggressively spent on xMult jokers rather than hoarded for interest.
+**Solution:** Added `_get_reserve_for_ante` to gradually step down the interest reserve from $25 in Ante 1-2, down to $10 in Ante 3-4, and down to $5 in Ante 5+.
+- Files: `skills/balatro/shop_analysis.py`, `skills/balatro/actions/shop.py`
+
+### [RESOLVED] Joker Selling Without Confirmed Replacement Value
+**Problem:** In `_build_dynamic_slot_full_error()`, jokers were always marked safe to sell due to a 100% tolerance check, causing the bot to repeatedly sell good jokers to buy slightly inferior replacements.
+**Solution:** Reduced `tolerance_pct` to 5.0 in the sell check, and required the replacement to improve the board's baseline expected score by at least 8.0%. If the improvement is below 8%, it outputs `HOLD`.
+- Files: `skills/balatro/actions/shop.py`, `skills/balatro/shop_analysis.py`
+
+### [RESOLVED] Target Discard Has No Committed Hand Type
+**Problem:** `find_best_discard()` made independent decisions each hand, often choosing to protect a Straight draw in a Checkered Deck run that was otherwise fully committed to Flushes.
+**Solution:** Passed a `target_hand_type` parameter into `find_best_discard()` derived from session state, ensuring coherent multi-hand progression toward the target hand type.
+- Files: `skills/balatro_bot/modules/algorithms.py`, `skills/balatro/session.py`, `skills/balatro/actions/play.py`
+
+### [RESOLVED] xMult Jokers Undervalued in Late Game
+**Problem:** xMult value was statically evaluated as `xMult * 60` regardless of the board's current baseline. Because of this, massive late game multipliers were routinely undervalued.
+**Solution:** Allowed `_estimate_joker_immediate_additive_value` to accept a `baseline_score`. If provided, the xMult score contribution is treated as the true score delta `(xMult - 1.0) * baseline_score`.
+- Files: `skills/balatro_bot/modules/algorithms.py`, `skills/balatro/shop_analysis.py`
+
+### [RESOLVED] Blind Score Targets Don't Scale Past Ante 4
+**Problem:** At Ante 5+, blind requirements increase exponentially, making the shop strategy pivot gate systematically reject good joker upgrades simply because the calculated estimate undershoots the requirement.
+**Solution:** Implemented `BLIND_SAFETY_MARGIN_BY_ANTE` to slowly relax the survival baseline threshold from `1.5x` down to `0.8x` by Ante 8, allowing accurate execution of late-game pivot swaps.
+- Files: `skills/balatro/shop_analysis.py`, `skills/balatro/actions/shop.py`
