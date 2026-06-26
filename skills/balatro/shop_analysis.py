@@ -742,7 +742,7 @@ def _build_shop_strategy_block(
         ]
         if sell_indices:
             lines.append(
-                f"- If joker slots are full, preferred [SAFE TO SELL] indices: {', '.join(sell_indices)}"
+                f"- [SAFE TO SELL] candidates (ONLY valid when all slots are full): {', '.join(sell_indices)}"
             )
 
     lines.append("*** END SHOP STRATEGY ***")

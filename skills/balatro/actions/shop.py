@@ -817,11 +817,14 @@ class RerollAction(BaseAction):
         post_reroll_money = money - reroll_cost
         ante = _safe_int(raw_state.get("ante_num"), 1)
         reserve_target = _get_reserve_for_ante(ante, money)
+        # Use the lower of the hard floor and the phase-aware reserve target so
+        # Mid/Late-game reserves ($10/$5) are not silently overridden by $15.
+        absolute_floor = min(CRITICAL_SPEND_FLOOR, reserve_target)
 
-        if post_reroll_money < CRITICAL_SPEND_FLOOR:
+        if post_reroll_money < absolute_floor:
             error = (
                 "Action Denied: Reroll blocked by economy floor "
-                f"(would leave ${post_reroll_money}, minimum is ${CRITICAL_SPEND_FLOOR}). "
+                f"(would leave ${post_reroll_money}, floor is ${absolute_floor}). "
                 "Pick a different action."
             )
             self._log_error(ctx, error)
@@ -868,7 +871,7 @@ class RerollAction(BaseAction):
 
         survival_exception = (
             post_reroll_money < reserve_target
-            and post_reroll_money >= CRITICAL_SPEND_FLOOR
+            and post_reroll_money >= absolute_floor
             and joker_slots_free > 0
             and weak_synergy
         )

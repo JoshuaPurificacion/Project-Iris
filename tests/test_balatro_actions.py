@@ -52,7 +52,16 @@ def test_sell_joker_includes_api_error_detail(mock_safe_sell):
 
     raw_state = {
         "state": "shop",
-        "jokers": {"cards": [{"label": "Test Joker", "key": "j_test"}]},
+        "jokers": {
+            "size": 5,
+            "cards": [
+                {"label": "Test Joker", "key": "j_test"},
+                {"label": "Joker 2", "key": "j_test_2"},
+                {"label": "Joker 3", "key": "j_test_3"},
+                {"label": "Joker 4", "key": "j_test_4"},
+                {"label": "Joker 5", "key": "j_test_5"},
+            ]
+        },
         "shop": {"cards": []},
         "hand": {"cards": []},
     }
@@ -1606,3 +1615,149 @@ def test_survival_gate_ante7_allows_pivot_that_ante2_would_block():
         f"Ante 7 should allow: gated_requirement=382 ≤ projected=400; got: {result_ante7.error!r}"
     )
 
+
+
+# ---------------------------------------------------------------------------
+# Fix 1 -- Dynamic reroll floor respects phase-aware reserve_target
+# ---------------------------------------------------------------------------
+
+
+def test_reroll_floor_uses_reserve_target_ante3():
+    """Ante 3: reserve=$10, absolute_floor=min(15,10)=10.
+
+    money=$12, reroll_cost=$1 -> post=$11 >= $10 -> reroll must be ALLOWED.
+    Before the fix this was blocked because post=$11 < CRITICAL_SPEND_FLOOR=$15.
+    """
+    raw_state = {
+        "state": "shop",
+        "money": 12,
+        "ante_num": 3,
+        "round": {"reroll_cost": 1},
+        "shop": {"cards": []},
+        "packs": {"cards": []},
+        "vouchers": {"cards": []},
+        "jokers": {"size": 5, "cards": []},
+        "hand": {"cards": []},
+    }
+    ctx = _build_context(raw_state, [])
+    ctx.controller.client.reroll.return_value = True
+
+    result = RerollAction().execute(ctx)
+
+    assert result.succeeded is True, (
+        f"Ante 3, post=$11, floor=min(15,10)=10: reroll should succeed, got: {result.error!r}"
+    )
+    ctx.controller.client.reroll.assert_called_once()
+
+
+def test_reroll_floor_uses_reserve_target_ante5():
+    """Ante 5: reserve=$5, absolute_floor=min(15,5)=5.
+
+    money=$7, reroll_cost=$1 -> post=$6 >= $5 -> reroll must be ALLOWED.
+    Before the fix this was blocked because post=$6 < CRITICAL_SPEND_FLOOR=$15.
+    """
+    raw_state = {
+        "state": "shop",
+        "money": 7,
+        "ante_num": 5,
+        "round": {"reroll_cost": 1},
+        "shop": {"cards": []},
+        "packs": {"cards": []},
+        "vouchers": {"cards": []},
+        "jokers": {"size": 5, "cards": []},
+        "hand": {"cards": []},
+    }
+    ctx = _build_context(raw_state, [])
+    ctx.controller.client.reroll.return_value = True
+
+    result = RerollAction().execute(ctx)
+
+    assert result.succeeded is True, (
+        f"Ante 5, post=$6, floor=min(15,5)=5: reroll should succeed, got: {result.error!r}"
+    )
+    ctx.controller.client.reroll.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Fix 2 -- Voluntary sell gate: blocked when slots not full
+# ---------------------------------------------------------------------------
+
+
+def test_sell_joker_blocked_when_slots_not_full():
+    """SellJokerAction must be blocked when joker_slots_used < joker_slots_total.
+
+    3 jokers in a 5-slot board -> gate fires before identify_safe_sell_jokers is
+    consulted. Error must name the joker and cite the slot counts.
+    """
+    raw_state = {
+        "state": "shop",
+        "money": 10,
+        "ante_num": 3,
+        "jokers": {
+            "size": 5,
+            "cards": [
+                {"key": "j_a", "label": "Mystic Summit", "value": {"effect": "+15 Mult"}, "cost": {"sell": 3}},
+                {"key": "j_b", "label": "Joker B", "value": {"effect": "+5 Chips"}, "cost": {"sell": 2}},
+                {"key": "j_c", "label": "Joker C", "value": {"effect": "+5 Chips"}, "cost": {"sell": 2}},
+            ],
+        },
+        "shop": {"cards": []},
+        "hand": {"cards": []},
+        "packs": {"cards": []},
+        "vouchers": {"cards": []},
+    }
+    ctx = _build_context(raw_state, [1])
+
+    result = SellJokerAction().execute(ctx)
+
+    assert result.succeeded is False
+    assert "slots are not full" in (result.error or "").lower(), (
+        f"Expected slot-gate block, got: {result.error!r}"
+    )
+    assert "3/5" in (result.error or ""), (
+        f"Expected slot counts in error, got: {result.error!r}"
+    )
+    ctx.controller.client.sell.assert_not_called()
+
+
+@patch("skills.balatro.actions.utility.BalatroAlgorithm.identify_safe_sell_jokers")
+def test_sell_joker_allowed_when_slots_full(mock_safe_sells):
+    """SellJokerAction must pass through when all joker slots are occupied
+    and the target joker is identified as safe to sell.
+
+    identify_safe_sell_jokers is mocked to return joker #1 as safe so the
+    safe-sell gate does not mask whether the slot-capacity check correctly
+    allows the action when slots are full (5/5).
+    """
+    mock_safe_sells.return_value = [
+        {"index": 1, "loss_pct": 0.0, "combined_loss_abs": 0, "reason": "LOW IMPACT"}
+    ]
+
+    raw_state = {
+        "state": "shop",
+        "money": 10,
+        "ante_num": 4,
+        "jokers": {
+            "size": 5,
+            "cards": [
+                {"key": "j_a", "label": "Weak A", "value": {"effect": "+2 Mult"}, "cost": {"sell": 2}},
+                {"key": "j_b", "label": "Joker B", "value": {"effect": "+5 Chips"}, "cost": {"sell": 2}},
+                {"key": "j_c", "label": "Joker C", "value": {"effect": "+5 Chips"}, "cost": {"sell": 2}},
+                {"key": "j_d", "label": "Joker D", "value": {"effect": "+5 Chips"}, "cost": {"sell": 2}},
+                {"key": "j_e", "label": "Joker E", "value": {"effect": "+5 Chips"}, "cost": {"sell": 2}},
+            ],
+        },
+        "shop": {"cards": []},
+        "hand": {"cards": []},
+        "packs": {"cards": []},
+        "vouchers": {"cards": []},
+    }
+    ctx = _build_context(raw_state, [1])
+    ctx.controller.client.sell.return_value = True
+
+    result = SellJokerAction().execute(ctx)
+
+    assert result.succeeded is True, (
+        f"Slots full (5/5) and joker is safe: sell should succeed, got: {result.error!r}"
+    )
+    ctx.controller.client.sell.assert_called_once()

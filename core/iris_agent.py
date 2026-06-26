@@ -232,12 +232,15 @@ class Iris:
 
             if avatar:
                 if hasattr(avatar, "current_mode"):
-                    avatar.current_mode.set(mode_name)
+                    try:
+                        avatar.window.after(0, lambda m=mode_name: avatar.current_mode.set(m))
+                    except Exception:
+                        pass
                 avatar.load_watchdog_data(
                     self.mode_data.PROTOTYPE_IMAGES, self.mode_data.PROJECT_KEYWORDS
                 )
 
-            print(f"\n[System] 🔄 Core swapped to: {mode_name.upper()} MODE")
+            log_system(f"Core swapped to: {mode_name.upper()} MODE")
 
             if self.vm:
                 if mode_name == "default":
@@ -294,7 +297,7 @@ class Iris:
                             f"Idle trigger: Using static nudge: {nudge_prompt[:30]}..."
                         )
 
-                    print(f"\n[Idle] Triggering unprompted speech...")
+                    log_system("Triggering unprompted speech...")
 
                     # Surprised expression for idle trigger, then brief pause before speaking
                     if avatar is not None:
@@ -310,7 +313,7 @@ class Iris:
 
             # MUST BE OUTSIDE THE LOCK, BUT INSIDE THE WHILE TRUE LOOP
             if response_text:
-                print(f"Iris (Idle): {response_text}")
+                log_iris_response(f"(Idle): {response_text}")
 
                 # Flag that the last interaction was an idle nudge
                 self.last_was_idle = True

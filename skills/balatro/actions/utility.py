@@ -88,13 +88,31 @@ class SellJokerAction(BaseAction):
             self._log_error(ctx, error)
             return ActionResult(succeeded=False, error=error, persona_reasoning="")
 
-        jokers = raw_state.get("jokers", {}).get("cards", [])
+        jokers_container = raw_state.get("jokers") or {}
+        jokers = jokers_container.get("cards", []) if isinstance(jokers_container, dict) else []
         if not (0 <= idx < len(jokers)):
             error = (
                 f"sell_joker index {args[0]} is out of bounds for {len(jokers)} jokers."
             )
             self._log_error(ctx, error)
             return ActionResult(succeeded=False, error=error, persona_reasoning="")
+
+        # Gate: never voluntarily sell when Joker slots are not full.
+        # If there is free space the correct action is to buy, never sell.
+        joker_slots_total = int(jokers_container.get("size", 5) or 5)
+        joker_slots_used = len(jokers)
+        if joker_slots_used < joker_slots_total:
+            joker_name = (
+                jokers[idx].get("label") or jokers[idx].get("key") or f"Joker {idx + 1}"
+            )
+            error = (
+                f"sell_joker blocked: Joker slots are not full "
+                f"({joker_slots_used}/{joker_slots_total}). "
+                "Only sell when all slots are occupied or to afford a critical upgrade. "
+                f"Keep {joker_name} and buy or continue instead."
+            )
+            self._log_error(ctx, error)
+            return ActionResult(succeeded=False, error=error, persona_reasoning=error)
 
         hand_cards = raw_state.get("hand", {}).get("cards", [])
         if not isinstance(hand_cards, list):

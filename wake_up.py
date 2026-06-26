@@ -284,12 +284,14 @@ def main():
     avatar.on_text_input = on_text_submitted
 
     # --- Mode switch callback ---
-    avatar.on_mode_switch = lambda mode: iris.switch_mode(mode, avatar=avatar)
+    avatar.on_mode_switch = lambda mode: threading.Thread(
+        target=iris.switch_mode, args=(mode,), kwargs={"avatar": avatar}, daemon=True
+    ).start()
 
     # --- Game action callback ---
-    avatar.on_game_action = lambda action: handle_game_action(
-        action, iris, avatar, game_window
-    )
+    avatar.on_game_action = lambda action: threading.Thread(
+        target=handle_game_action, args=(action, iris, avatar, game_window), daemon=True
+    ).start()
 
     # --- Pre-warm LLM in background to avoid blocking ---
     print("Pre-warming LLM into VRAM...")
